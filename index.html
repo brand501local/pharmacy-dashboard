@@ -79,7 +79,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 
 <style>
 .pd{font-family:var(--font-anthropic-sans);color:var(--color-fg);display:flex;flex-direction:column;gap:var(--cds-gap-xl)}
-.pd h1{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);margin:0}
+.pd h1{font-family:var(--font-anthropic-sans);font-weight:700;letter-spacing:-0.02em;font-size:var(--cds-font-size-title);margin:0}
 .pd h2{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);margin:0 0 var(--cds-gap-xs)}
 .pd .sub{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption);margin:var(--cds-gap-xs) 0 0}
 .pd .lead{margin:var(--cds-gap-sm) 0 0;font-size:var(--cds-font-size-body);line-height:1.6}
@@ -87,7 +87,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--cds-gap-md)}
 .pd .tile h3{margin:0;font-size:var(--cds-font-size-body);font-weight:var(--cds-font-weight-medium);display:flex;align-items:center;gap:6px}
 .pd .sw{display:inline-block;width:10px;height:10px;border-radius:2px}
-.pd .big{font-family:var(--font-anthropic-serif);font-weight:400;font-size:2rem;margin:var(--cds-gap-xs) 0;font-variant-numeric:tabular-nums}
+.pd .big{font-family:var(--font-anthropic-sans);font-weight:700;letter-spacing:-0.02em;font-size:2rem;margin:var(--cds-gap-xs) 0;font-variant-numeric:tabular-nums}
 .pd .kv{display:grid;grid-template-columns:1fr auto;gap:2px var(--cds-gap-md);font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums}
 .pd .kv dt{color:var(--color-fg-muted)} .pd .kv dd{margin:0;text-align:right}
 .pd .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:var(--cds-gap-md)}
@@ -113,6 +113,8 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd details{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);line-height:1.7}
 .pd details summary{cursor:pointer;color:var(--color-fg)}
 .pd details li{margin-bottom:4px}
+.pd .more{display:flex;gap:var(--cds-gap-sm);align-items:center;flex-wrap:wrap;margin-top:var(--cds-gap-sm);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.pd .more button{font:inherit;border:1px solid var(--color-border-line);background:var(--color-panel);color:var(--color-fg);border-radius:var(--cds-radius);padding:4px 12px;cursor:pointer}
 </style>
 
 <div class="pd" data-read lang="ko">
@@ -209,6 +211,8 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
           <select id="ph-ch" class="dash-select" aria-label="채널"><option value="">전체</option><option value="폐쇄몰">폐쇄몰</option><option value="KD">KD</option><option value="바로팜">바로팜</option></select>
           <label for="ph-area">상권</label>
           <select id="ph-area" class="dash-select" data-draw="ph-area" aria-label="상권" data-source="pharmacy_summary"></select>
+          <label for="ph-re">재발주</label>
+          <select id="ph-re" class="dash-select" aria-label="재발주"><option value="">전체</option><option value="re">재발주 약국(2회 이상)</option><option value="once">1회 발주</option></select>
           <label for="ph-sort">정렬</label>
           <select id="ph-sort" class="dash-select" aria-label="정렬"><option value="orders">발주 횟수</option><option value="amount">매출</option><option value="last">최근 발주일</option></select>
         </div>
@@ -218,6 +222,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
             <tbody data-draw="ph-rows"></tbody>
           </table>
         </div>
+        <div class="more" data-draw="ph-more" data-source="pharmacy_summary"></div>
       </div>
     </div>
   </section>
@@ -609,13 +614,18 @@ dash.draw('dist-chart', (el) => {
   PDC.hbar(el, d.data.map((r) => ({ label: r.bucket, fm: r.fm, kd: r.kd, bp: r.bp })), (v) => PD.int(v) + '곳').attr('aria-label', '발주 횟수 구간별 약국 수');
 });
 
+// 약국 목록: 필터·정렬한 행 (표와 더보기가 같이 씀). 처음엔 10곳만 표시
+PD.phRows = (data) => {
+  const { phCh, phSort } = PD.state;
+  return data.filter((r) => (!phCh || r.channel === phCh) && (!PD.state.phArea || r.area === PD.state.phArea) && (!PD.state.phRe || (PD.state.phRe === 're' ? +r.orders >= 2 : +r.orders < 2))).slice().sort((a, b) =>
+    phSort === 'last' ? b.last.localeCompare(a.last) : (+b[phSort] - +a[phSort]) || (+b.amount - +a.amount));
+};
+PD.phShow = (n) => { PD.state.phLimit = n; dash.draw('ph-rows'); dash.draw('ph-more'); };
 dash.draw('ph-rows', (tb) => {
   const d = dash.data('pharmacy_summary');
   tb.replaceChildren();
   if (d.status !== 'ok' || !d.data) return;
-  const { phCh, phSort } = PD.state;
-  const rows = d.data.filter((r) => (!phCh || r.channel === phCh) && (!PD.state.phArea || r.area === PD.state.phArea)).slice().sort((a, b) =>
-    phSort === 'last' ? b.last.localeCompare(a.last) : (+b[phSort] - +a[phSort]) || (+b.amount - +a.amount));
+  const rows = PD.phRows(d.data).slice(0, PD.state.phLimit || 10);
   for (const r of rows) {
     const tr = document.createElement('tr');
     tr.dataset.key = encodeURIComponent(r.channel) + ',' + encodeURIComponent(r.pharmacy);
@@ -624,16 +634,28 @@ dash.draw('ph-rows', (tb) => {
     tb.appendChild(tr);
   }
 });
+dash.draw('ph-more', (el) => {
+  const d = dash.data('pharmacy_summary');
+  el.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const total = PD.phRows(d.data).length, lim = Math.min(PD.state.phLimit || 10, total);
+  if (!total) return;
+  const s = document.createElement('span'); s.textContent = `${PD.int(total)}곳 중 ${PD.int(lim)}곳 표시`; el.appendChild(s);
+  const btn = (label, n) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = () => PD.phShow(n); el.appendChild(b); };
+  if (lim < total) { btn('10곳 더 보기', lim + 10); btn('전체 보기', total); }
+  if (lim > 10) btn('접기', 10);
+});
 dash.draw('ph-area', (sel) => {
   const d = dash.data('pharmacy_summary');
   const areas = d.status === 'ok' && d.data ? [...new Set(d.data.map((r) => r.area))].sort((a, b) => a.localeCompare(b, 'ko')) : [];
   sel.replaceChildren(new Option('전체', ''), ...areas.map((a) => new Option(a, a)));
   if (PD.state.phArea && !areas.includes(PD.state.phArea)) PD.state.phArea = '';
   sel.value = PD.state.phArea || '';
-  sel.onchange = () => { PD.state.phArea = sel.value; dash.draw('ph-rows'); };
+  sel.onchange = () => { PD.state.phArea = sel.value; PD.phShow(10); };
 });
-document.querySelectorAll('#ph-ch').forEach((s) => s.addEventListener('change', () => { PD.state.phCh = s.value; dash.draw('ph-rows'); }));
-document.querySelectorAll('#ph-sort').forEach((s) => s.addEventListener('change', () => { PD.state.phSort = s.value; dash.draw('ph-rows'); }));
+document.querySelectorAll('#ph-ch').forEach((s) => s.addEventListener('change', () => { PD.state.phCh = s.value; PD.phShow(10); }));
+document.querySelectorAll('#ph-sort').forEach((s) => s.addEventListener('change', () => { PD.state.phSort = s.value; PD.phShow(10); }));
+document.querySelectorAll('#ph-re').forEach((s) => s.addEventListener('change', () => { PD.state.phRe = s.value; PD.phShow(10); }));
 
 const regionDraw = (id, src, n, label) => dash.draw(id, (el) => {
   const d = dash.data(src);
