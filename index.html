@@ -103,7 +103,8 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd .seg button+button{border-left:1px solid var(--color-border-line)}
 .pd .seg button[aria-pressed="true"]{background:var(--color-panel);color:var(--color-fg);font-weight:var(--cds-font-weight-medium)}
 .pd .bar{display:flex;gap:var(--cds-gap-md);align-items:center;flex-wrap:wrap}
-.pd .tw{overflow:auto;max-height:520px}
+.pd .tw{overflow-x:auto}
+.pd #pharmacy-table{grid-column:1/-1}
 .pd table{border-collapse:collapse;width:100%;font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums}
 .pd th,.pd td{padding:6px 8px;border-bottom:1px solid var(--color-border-line);text-align:left;white-space:nowrap}
 .pd th{position:sticky;top:0;background:var(--color-panel);font-weight:var(--cds-font-weight-medium);color:var(--color-fg-muted)}
