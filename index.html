@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>약국 매출 대시보드</title>
+<style>
+:root{--font-anthropic-sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;--font-anthropic-serif:Georgia,"Nanum Myeongjo",serif;
+--color-fg:#1f1f1c;--color-fg-muted:#6b6a64;--color-bg:#faf9f6;--color-panel:#ffffff;--color-border-line:#e4e2dc;
+--cds-gap-xs:4px;--cds-gap-sm:8px;--cds-gap-md:16px;--cds-gap-lg:24px;--cds-gap-xl:32px;--cds-pad-lg:20px;--cds-radius:10px;
+--cds-font-size-caption:12.5px;--cds-font-size-body:15px;--cds-font-size-heading:17px;--cds-font-size-title:28px;--cds-font-weight-medium:600;
+--cds-text-secondary:#6b6a64;--cds-chart-grid:#ecebe6;--cds-chart-axis:#cfcdc6;--cds-surface-popover:#ffffff;--cds-border:#dcdad3;--cds-shadow-popover:0 4px 16px rgba(0,0,0,.12)}
+@media (prefers-color-scheme: dark){:root{--color-fg:#ecebe6;--color-fg-muted:#a3a19a;--color-bg:#1b1b19;--color-panel:#252522;--color-border-line:#3a3935;
+--cds-text-secondary:#a3a19a;--cds-chart-grid:#33322f;--cds-chart-axis:#4a4945;--cds-surface-popover:#2c2c29;--cds-border:#44433f}}
+html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:var(--font-anthropic-sans)}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 20px 60px}
+.dash-select{font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--color-border-line);border-radius:8px;background-color:var(--color-panel);color:var(--color-fg);max-width:100%}
+#lock[hidden]{display:none}
+#lock{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+#lock .box{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:14px;padding:32px;max-width:360px;width:100%;box-sizing:border-box}
+#lock h1{font-size:20px;margin:0 0 6px} #lock p{color:var(--color-fg-muted);font-size:14px;margin:0 0 18px}
+#lock input{width:100%;box-sizing:border-box;font:inherit;padding:10px 12px;border:1px solid var(--color-border-line);border-radius:8px;background:var(--color-bg);color:var(--color-fg)}
+#lock button{margin-top:12px;width:100%;font:inherit;font-weight:600;padding:10px;border:0;border-radius:8px;background:#2f6fdb;color:#fff;cursor:pointer}
+#lock-msg{min-height:20px;font-size:13px;color:#c0392b;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="lock"><form class="box" id="lock-form">
+  <h1>약국 매출 대시보드</h1><p>폐쇄몰 · KD 내부용 자료예요. 비밀번호를 입력해 주세요.</p>
+  <input id="lock-pw" type="password" autocomplete="current-password" placeholder="비밀번호" required autofocus>
+  <button type="submit">열기</button><div id="lock-msg" role="alert"></div>
+</form></div>
+<div id="app" hidden><div class="wrap">
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.2/dist/d3.min.js" integrity="sha384-LxfWGZyh6PaLjBRPf7NWiEYs9Mn0UQ6ZmqbLLZhxlOBBNWF2a2K0Pfc5efkrNnhQ" crossorigin="anonymous"></script>
+
+<script>
+// 대시보드 런타임(dash) 최소 구현: 같은 페이지 코드를 독립 사이트에서 돌리기 위함
+(() => {
+  const sources = {}, calcs = {}, draws = {}, listeners = [];
+  let params = { period: 'month' }, cache = {}, loaded = false;
+  const get = (id) => {
+    if (id in sources) return { status: loaded ? 'ok' : 'loading', data: sources[id] };
+    if (id in calcs) {
+      if (!loaded) return { status: 'loading', data: null };
+      if (!(id in cache)) {
+        const c = calcs[id];
+        const args = c.inputs.map((i) => get(i).data || []);
+        cache[id] = c.fn(...args);
+      }
+      return { status: 'ok', data: cache[id] };
+    }
+    return { status: 'missing', data: [] };
+  };
+  const runDraw = (name) => {
+    const fn = draws[name]; if (!fn) return;
+    document.querySelectorAll(`[data-draw="${name}"]`).forEach((el) => { try { fn(el); } catch (e) { console.error(name, e); } });
+  };
+  const refresh = () => { cache = {}; listeners.forEach((f) => f()); Object.keys(draws).forEach(runDraw); };
+  window.dash = {
+    colors: ['#2f6fdb', '#e8833a', '#3aa676', '#b04fc9'],
+    data: get,
+    calc: (id, def) => { calcs[id] = def; },
+    loader: () => {},
+    draw: (name, fn) => { if (fn) draws[name] = typeof fn === 'function' ? fn : fn.update || (() => {}); else runDraw(name); },
+    onData: (fn) => { listeners.push(fn); fn(); },
+    params: () => ({ ...params }),
+    setParams: (p) => { params = { ...params, ...p }; refresh(); },
+    resetParams: () => { params = { period: 'month' }; refresh(); },
+    setLink: () => {},
+    refresh: () => {},
+    _load: (obj) => { for (const k of Object.keys(obj)) sources[k] = obj[k]; loaded = true; refresh(); },
+    _refresh: refresh,
+  };
+  let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(refresh, 150); });
+})();
+</script>
+
+
+<style>
+.pd{font-family:var(--font-anthropic-sans);color:var(--color-fg);display:flex;flex-direction:column;gap:var(--cds-gap-xl)}
+.pd h1{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);margin:0}
+.pd h2{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);margin:0 0 var(--cds-gap-xs)}
+.pd .sub{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption);margin:var(--cds-gap-xs) 0 0}
+.pd .lead{margin:var(--cds-gap-sm) 0 0;font-size:var(--cds-font-size-body);line-height:1.6}
+.pd .card{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-lg)}
+.pd .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--cds-gap-md)}
+.pd .tile h3{margin:0;font-size:var(--cds-font-size-body);font-weight:var(--cds-font-weight-medium);display:flex;align-items:center;gap:6px}
+.pd .sw{display:inline-block;width:10px;height:10px;border-radius:2px}
+.pd .big{font-family:var(--font-anthropic-serif);font-weight:400;font-size:2rem;margin:var(--cds-gap-xs) 0;font-variant-numeric:tabular-nums}
+.pd .kv{display:grid;grid-template-columns:1fr auto;gap:2px var(--cds-gap-md);font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums}
+.pd .kv dt{color:var(--color-fg-muted)} .pd .kv dd{margin:0;text-align:right}
+.pd .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:var(--cds-gap-md)}
+.pd .chart{position:relative;min-height:240px;width:100%}
+.pd .chart svg text{fill:var(--cds-text-secondary);font-size:var(--cds-font-size-caption)}
+.pd .chart .tick line{stroke:var(--cds-chart-grid)} .pd .chart .domain{stroke:var(--cds-chart-axis)}
+.pd .tip{position:absolute;pointer-events:none;background:var(--cds-surface-popover);border:1px solid var(--cds-border);box-shadow:var(--cds-shadow-popover);border-radius:var(--cds-radius);padding:6px 8px;font-size:var(--cds-font-size-caption);white-space:nowrap;z-index:2}
+.pd .legend{display:flex;gap:var(--cds-gap-md);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);margin-bottom:var(--cds-gap-sm);flex-wrap:wrap}
+.pd .legend span{display:inline-flex;align-items:center;gap:4px}
+.pd .ctrl{display:flex;gap:var(--cds-gap-sm);align-items:center;flex-wrap:wrap;margin-bottom:var(--cds-gap-sm);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.pd .seg{display:inline-flex;border:1px solid var(--color-border-line);border-radius:var(--cds-radius);overflow:hidden}
+.pd .seg button{font:inherit;font-size:var(--cds-font-size-body);border:0;background:transparent;color:var(--color-fg-muted);padding:6px 14px;cursor:pointer}
+.pd .seg button+button{border-left:1px solid var(--color-border-line)}
+.pd .seg button[aria-pressed="true"]{background:var(--color-panel);color:var(--color-fg);font-weight:var(--cds-font-weight-medium)}
+.pd .bar{display:flex;gap:var(--cds-gap-md);align-items:center;flex-wrap:wrap}
+.pd .tw{overflow:auto;max-height:520px}
+.pd table{border-collapse:collapse;width:100%;font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums}
+.pd th,.pd td{padding:6px 8px;border-bottom:1px solid var(--color-border-line);text-align:left;white-space:nowrap}
+.pd th{position:sticky;top:0;background:var(--color-panel);font-weight:var(--cds-font-weight-medium);color:var(--color-fg-muted)}
+.pd td.n,.pd th.n{text-align:right}
+.pd .muted{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)}
+.pd details{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);line-height:1.7}
+.pd details summary{cursor:pointer;color:var(--color-fg)}
+.pd details li{margin-bottom:4px}
+</style>
+
+<div class="pd" data-read lang="ko">
+  <header>
+    <h1>약국 매출 대시보드 · 폐쇄몰 &amp; KD</h1>
+    <p class="sub">집계 기간 <span data-draw="range" data-source="period_info" data-field="range">—</span> · 매주 월요일 오전 갱신 · 마지막 갱신 <span id="built">—</span></p>
+    <div class="bar" style="margin-top:var(--cds-gap-md)">
+      <div class="seg" role="group" aria-label="기간" id="period">
+        <button type="button" data-period="month" aria-pressed="true">이번 달</button>
+        <button type="button" data-period="3m" aria-pressed="false">최근 3개월</button>
+        <button type="button" data-period="year" aria-pressed="false">2026년 전체</button>
+      </div>
+    </div>
+    <p class="lead">이 기간 두 채널 합계 매출은 <b data-draw="t-rev" data-source="channel_summary" data-field="revenue" data-where="channel=합계">—</b>이며, 이 중 폐쇄몰이 <b data-draw="t-share" data-source="channel_summary" data-field="share" data-where="channel=폐쇄몰">—</b>를 차지해요. 주문한 약국 <b data-draw="t-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=합계">—</b>곳 중 <b data-draw="t-re" data-source="channel_summary" data-field="reorder_pharmacies" data-where="channel=합계">—</b>곳이 두 번 이상 발주했어요.</p>
+  </header>
+
+  <section id="channels">
+    <h2>채널별 매출</h2>
+    <p class="muted">매출은 할인·적립금·환불 차감 전 공급 매출, 공헌이익은 시트 계산값</p>
+    <div class="tiles">
+      <div class="card tile" id="tile-fm">
+        <h3><span class="sw" data-draw="sw-fm"></span>폐쇄몰</h3>
+        <div class="big" data-draw="fm-rev" data-source="channel_summary" data-field="revenue" data-where="channel=폐쇄몰">—</div>
+        <dl class="kv">
+          <dt>매출 비중</dt><dd data-draw="fm-share" data-source="channel_summary" data-field="share" data-where="channel=폐쇄몰">—</dd>
+          <dt>판매량</dt><dd data-draw="fm-qty" data-source="channel_summary" data-field="qty" data-where="channel=폐쇄몰">—</dd>
+          <dt>공헌이익</dt><dd data-draw="fm-cm" data-source="channel_summary" data-field="contribution" data-where="channel=폐쇄몰">—</dd>
+          <dt>공헌이익률</dt><dd data-draw="fm-cmr" data-source="channel_summary" data-field="margin" data-where="channel=폐쇄몰">—</dd>
+          <dt>주문 약국</dt><dd data-draw="fm-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=폐쇄몰">—</dd>
+          <dt>재발주 약국 비율</dt><dd data-draw="fm-rr" data-source="channel_summary" data-field="reorder_rate" data-where="channel=폐쇄몰">—</dd>
+        </dl>
+      </div>
+      <div class="card tile" id="tile-kd">
+        <h3><span class="sw" data-draw="sw-kd"></span>KD</h3>
+        <div class="big" data-draw="kd-rev" data-source="channel_summary" data-field="revenue" data-where="channel=KD">—</div>
+        <dl class="kv">
+          <dt>매출 비중</dt><dd data-draw="kd-share" data-source="channel_summary" data-field="share" data-where="channel=KD">—</dd>
+          <dt>판매량</dt><dd data-draw="kd-qty" data-source="channel_summary" data-field="qty" data-where="channel=KD">—</dd>
+          <dt>공헌이익</dt><dd data-draw="kd-cm" data-source="channel_summary" data-field="contribution" data-where="channel=KD">—</dd>
+          <dt>공헌이익률</dt><dd data-draw="kd-cmr" data-source="channel_summary" data-field="margin" data-where="channel=KD">—</dd>
+          <dt>주문 약국</dt><dd data-draw="kd-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=KD">—</dd>
+          <dt>재발주 약국 비율</dt><dd data-draw="kd-rr" data-source="channel_summary" data-field="reorder_rate" data-where="channel=KD">—</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="card" style="margin-top:var(--cds-gap-md)" id="trend">
+      <h2>매출 추이 <span class="muted" data-draw="trend-unit" data-source="period_info" data-field="unit">—</span></h2>
+      <div class="legend"><span><i class="sw" data-draw="lg1-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg1-kd"></i>KD</span></div>
+      <div class="chart" data-draw="trend-chart" data-source="revenue_trend"></div>
+    </div>
+  </section>
+
+  <section id="products">
+    <h2>제품별 판매</h2>
+    <div class="grid2">
+      <div class="card" id="product-rank">
+        <h2>제품별 매출 상위 15</h2>
+        <div class="legend"><span><i class="sw" data-draw="lg2-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg2-kd"></i>KD</span></div>
+        <div class="chart" data-draw="product-chart" data-source="product_summary"></div>
+      </div>
+      <div class="card" id="product-trend">
+        <h2>제품별 판매량 추이</h2>
+        <div class="ctrl"><label for="prod-sel">제품</label><select id="prod-sel" class="dash-select" data-draw="prod-sel" aria-label="제품 선택" data-source="product_summary"></select></div>
+        <div class="legend"><span><i class="sw" data-draw="lg3-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg3-kd"></i>KD</span></div>
+        <div class="chart" data-draw="ptrend-chart" data-source="order_lines"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="reorders">
+    <h2>약국별 재발주</h2>
+    <p class="muted">발주 횟수 = 선택한 기간에 주문한 날짜 수 (같은 날 여러 건은 1회). 재발주 = 발주 횟수 − 1</p>
+    <div class="grid2">
+      <div class="card" id="reorder-dist">
+        <h2>발주 횟수별 약국 수</h2>
+        <div class="legend"><span><i class="sw" data-draw="lg4-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg4-kd"></i>KD</span></div>
+        <div class="chart" data-draw="dist-chart" data-source="reorder_dist"></div>
+      </div>
+      <div class="card" id="pharmacy-table">
+        <h2>약국 목록</h2>
+        <div class="ctrl"><label for="ph-ch">채널</label>
+          <select id="ph-ch" class="dash-select" aria-label="채널"><option value="">전체</option><option value="폐쇄몰">폐쇄몰</option><option value="KD">KD</option></select>
+          <label for="ph-sort">정렬</label>
+          <select id="ph-sort" class="dash-select" aria-label="정렬"><option value="orders">발주 횟수</option><option value="amount">매출</option><option value="last">최근 발주일</option></select>
+        </div>
+        <div class="tw">
+          <table data-source="pharmacy_summary" data-row-key="channel,pharmacy">
+            <thead><tr><th data-field="pharmacy">약국</th><th data-field="channel">채널</th><th data-field="orders" class="n">발주</th><th data-field="reorders" class="n">재발주</th><th data-field="amount" class="n">매출(원)</th><th data-field="sgg">지역</th><th data-field="last">최근 발주</th></tr></thead>
+            <tbody data-draw="ph-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="regions">
+    <h2>지역별 매출 비중</h2>
+    <div class="grid2">
+      <div class="card" id="region-sido">
+        <h2>시·도별 매출</h2>
+        <div class="legend"><span><i class="sw" data-draw="lg5-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg5-kd"></i>KD</span></div>
+        <div class="chart" data-draw="sido-chart" data-source="region_summary"></div>
+      </div>
+      <div class="card" id="region-sgg">
+        <h2>시·군·구별 매출 상위 12</h2>
+        <div class="legend"><span><i class="sw" data-draw="lg6-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg6-kd"></i>KD</span></div>
+        <div class="chart" data-draw="sgg-chart" data-source="sgg_summary"></div>
+      </div>
+    </div>
+  </section>
+
+  <details id="notes">
+    <summary>데이터 기준과 유의사항</summary>
+    <ul>
+      <li><b>기간</b>: ‘이번 달’은 데이터가 있는 가장 최근 달, ‘최근 3개월’은 그 달을 포함한 3개월, ‘2026년 전체’는 2026년의 모든 월 파일이에요. 드라이브에서 읽을 수 없는 달은 빠져요.</li>
+      <li><b>채널 매출·판매량·공헌이익</b>: 각 월 시트의 ‘폐쇄몰_매출’, ‘KD_매출’ 탭 일별 값을 그대로 썼어요.</li>
+      <li><b>폐쇄몰 제품·약국·지역 매출</b>: ‘폐쇄몰 주문원장’의 상품구매금액(환불·할인 차감 전)이에요. 발주일이 빈 행은 주문번호 앞자리 날짜로 채워서, 시트 매출과 1% 안쪽 차이가 나요.</li>
+      <li><b>KD 제품·약국·지역 매출은 추정치예요.</b> KD 주문원장에 금액이 없는 달이 있어서, ‘KD_매출’ 탭의 일별 매출을 그날 주문 수량 비율로 배분했어요. 채널 합계는 시트와 같아요.</li>
+      <li><b>KD 판매량</b>: 채널 카드는 ‘KD_매출’ 탭 판매량이고, 제품 차트는 주문원장 수량이에요. 11월은 원장 1,280개, 시트 780개로 차이가 있어요.</li>
+      <li><b>제품명 통일</b>: 채널·달마다 다른 상품명을 키워드 규칙으로 하나로 맞췄어요. 옵션(댕글러·POP)과 [예약 판매] 같은 머리말은 무시했고, ‘레티놀/레티날 아이백 크림 10ml’, ‘TX 기미 세럼/앰플 알엑스’는 같은 제품으로 봤어요. 세트는 낱개로 풀지 않았어요.</li>
+      <li><b>약국 구분</b>: 폐쇄몰은 월 시트의 약국 목록 탭(약국명·고객명·연락처)으로 약국명을 찾았고, 못 찾은 주문은 ‘주문자 이름’으로 표시돼요. KD는 주문원장의 약국명(아이디 포함) 기준이에요.</li>
+      <li><b>지역</b>: 배송 주소의 시·도와 시·군·구로 나눴어요.</li>
+      <li>바로팜·이팜은 제외했어요.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+window.PD = {
+  won: (v) => {
+    v = Math.round(+v || 0);
+    if (Math.abs(v) >= 1e8) return (v / 1e8).toFixed(2) + '억원';
+    if (Math.abs(v) >= 1e4) return Math.round(v / 1e4).toLocaleString('ko-KR') + '만원';
+    return v.toLocaleString('ko-KR') + '원';
+  },
+  int: (v) => Math.round(+v || 0).toLocaleString('ko-KR'),
+  pct: (v) => ((+v || 0) * 100).toFixed(1) + '%',
+  CH: ['폐쇄몰', 'KD'],
+  col: (ch) => (ch === 'KD' ? dash.colors[1] : dash.colors[0]),
+  state: { product: null, phCh: '', phSort: 'orders' },
+  // 선택한 기간의 월 목록 ("YYYY-MM"), 데이터의 가장 최근 달 기준
+  months: (period, daily) => {
+    const all = [...new Set(daily.map((r) => r.month))].sort();
+    if (!all.length) return [];
+    const last = all[all.length - 1];
+    if (period === 'year') return all.filter((m) => m.startsWith(last.slice(0, 4)));
+    if (period === '3m') {
+      const [y, mo] = last.split('-').map(Number);
+      const want = [0, 1, 2].map((k) => { const d = new Date(Date.UTC(y, mo - 1 - k, 1)); return d.toISOString().slice(0, 7); });
+      return all.filter((m) => want.includes(m));
+    }
+    return [last];
+  },
+};
+
+dash.calc('period_info', {
+  title: '선택한 기간',
+  description: '기간 버튼(이번 달 / 최근 3개월 / 2026년 전체)에 따라 포함되는 달과 날짜 범위',
+  inputs: ['channel_daily'],
+  fn: (daily) => {
+    const period = dash.params().period || 'month';
+    const ms = PD.months(period, daily);
+    const days = daily.filter((r) => ms.includes(r.month) && (+r.revenue || 0) > 0).map((r) => r.date).sort();
+    const f = (s) => (s ? `${+s.slice(5, 7)}월 ${+s.slice(8)}일` : '');
+    return [{ period, months: ms.join(','), range: days.length ? `${days[0].slice(0, 4)}년 ${f(days[0])} ~ ${f(days[days.length - 1])}` : '데이터 없음',
+      unit: period === 'month' ? '(일별)' : '(월별)' }];
+  },
+});
+
+const inPeriod = (rows, daily) => { const ms = PD.months(dash.params().period || 'month', daily); return rows.filter((r) => ms.includes(r.month)); };
+
+dash.calc('pharmacy_summary', {
+  title: '약국별 발주 요약',
+  description: '선택한 기간의 주문 내역에서 약국별 발주 횟수(주문일 수), 재발주, 매출, 주 배송 지역을 계산',
+  inputs: ['order_lines', 'channel_daily'],
+  fn: (lines, daily) => {
+    const m = new Map();
+    for (const r of inPeriod(lines, daily)) {
+      const k = r.channel + '|' + r.pharmacy;
+      const o = m.get(k) || { channel: r.channel, pharmacy: r.pharmacy, dates: new Set(), amount: 0, regions: new Map(), last: '' };
+      o.dates.add(r.date); o.amount += +r.amount || 0;
+      o.regions.set(r.sgg, (o.regions.get(r.sgg) || 0) + 1);
+      if (r.date > o.last) o.last = r.date;
+      m.set(k, o);
+    }
+    return [...m.values()].map((o) => {
+      const sgg = [...o.regions.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      return { channel: o.channel, pharmacy: o.pharmacy, orders: o.dates.size, reorders: o.dates.size - 1, amount: o.amount, sgg, sido: sgg.split(' ')[0], last: o.last };
+    }).sort((a, b) => b.amount - a.amount);
+  },
+});
+
+dash.calc('channel_summary', {
+  title: '채널별 요약',
+  description: '선택한 기간의 일별 매출 시트 합계와 약국 발주 요약에서 계산한 채널별 매출, 비중, 공헌이익, 재발주 약국 수',
+  inputs: ['channel_daily', 'pharmacy_summary'],
+  fn: (daily, pharmacies) => {
+    const d0 = inPeriod(daily, daily);
+    const agg = (ch) => {
+      const d = ch ? d0.filter((r) => r.channel === ch) : d0;
+      const p = ch ? pharmacies.filter((r) => r.channel === ch) : pharmacies;
+      const revenue = d.reduce((s, r) => s + (+r.revenue || 0), 0);
+      const contribution = d.reduce((s, r) => s + (+r.contribution || 0), 0);
+      const qty = d.reduce((s, r) => s + (+r.qty || 0), 0);
+      const re = p.filter((r) => +r.orders >= 2).length;
+      return { channel: ch || '합계', revenue, qty, contribution, margin: revenue ? contribution / revenue : 0,
+        pharmacies: p.length, reorder_pharmacies: re, reorder_rate: p.length ? re / p.length : 0 };
+    };
+    const rows = [agg('폐쇄몰'), agg('KD'), agg(null)];
+    const tot = rows[2].revenue;
+    rows.forEach((r) => (r.share = tot ? r.revenue / tot : 0));
+    return rows;
+  },
+});
+
+dash.calc('revenue_trend', {
+  title: '매출 추이',
+  description: '선택한 기간의 채널별 매출을 이번 달은 일별, 그 외는 월별로 합산',
+  inputs: ['channel_daily'],
+  fn: (daily) => {
+    const period = dash.params().period || 'month';
+    const key = (r) => (period === 'month' ? r.date : r.month);
+    const m = new Map();
+    for (const r of inPeriod(daily, daily)) {
+      const o = m.get(key(r)) || { key: key(r), fm: 0, kd: 0 };
+      if (r.channel === 'KD') o.kd += +r.revenue || 0; else o.fm += +r.revenue || 0;
+      m.set(key(r), o);
+    }
+    return [...m.values()].sort((a, b) => a.key.localeCompare(b.key));
+  },
+});
+
+dash.calc('product_summary', {
+  title: '제품별 판매 합계',
+  description: '선택한 기간의 주문 내역을 통일한 제품명 기준으로 채널별 수량과 매출 합산 (KD 매출은 추정 배분값)',
+  inputs: ['order_lines', 'channel_daily'],
+  fn: (lines, daily) => {
+    const m = new Map();
+    for (const r of inPeriod(lines, daily)) {
+      const o = m.get(r.product) || { product: r.product, line: r.line, qty_fm: 0, qty_kd: 0, amount_fm: 0, amount_kd: 0 };
+      if (r.channel === 'KD') { o.qty_kd += +r.qty || 0; o.amount_kd += +r.amount || 0; }
+      else { o.qty_fm += +r.qty || 0; o.amount_fm += +r.amount || 0; }
+      m.set(r.product, o);
+    }
+    return [...m.values()].map((o) => ({ ...o, qty: o.qty_fm + o.qty_kd, amount: o.amount_fm + o.amount_kd }))
+      .sort((a, b) => b.amount - a.amount);
+  },
+});
+
+dash.calc('reorder_dist', {
+  title: '발주 횟수별 약국 수',
+  description: '선택한 기간의 약국별 발주 횟수를 구간으로 나눠 채널별로 센 값',
+  inputs: ['pharmacy_summary'],
+  fn: (pharmacies) => {
+    const buckets = ['1회', '2회', '3~4회', '5~9회', '10회 이상'];
+    const b = (n) => (n <= 1 ? '1회' : n === 2 ? '2회' : n <= 4 ? '3~4회' : n <= 9 ? '5~9회' : '10회 이상');
+    const rows = buckets.map((k) => ({ bucket: k, fm: 0, kd: 0 }));
+    for (const r of pharmacies) {
+      const row = rows.find((x) => x.bucket === b(+r.orders));
+      if (r.channel === 'KD') row.kd++; else row.fm++;
+    }
+    return rows;
+  },
+});
+
+const regionCalc = (key, lines, daily) => {
+  const m = new Map();
+  let tot = 0;
+  for (const r of inPeriod(lines, daily)) {
+    const k = r[key] || '미상';
+    const o = m.get(k) || { region: k, amount_fm: 0, amount_kd: 0 };
+    if (r.channel === 'KD') o.amount_kd += +r.amount || 0; else o.amount_fm += +r.amount || 0;
+    tot += +r.amount || 0;
+    m.set(k, o);
+  }
+  return [...m.values()].map((o) => ({ ...o, amount: o.amount_fm + o.amount_kd, share: tot ? (o.amount_fm + o.amount_kd) / tot : 0 }))
+    .sort((a, b) => b.amount - a.amount);
+};
+dash.calc('region_summary', {
+  title: '시·도별 매출',
+  description: '선택한 기간, 배송 주소의 시·도 기준 채널별 매출과 비중 (KD 매출은 추정 배분값)',
+  inputs: ['order_lines', 'channel_daily'],
+  fn: (lines, daily) => regionCalc('sido', lines, daily),
+});
+dash.calc('sgg_summary', {
+  title: '시·군·구별 매출',
+  description: '선택한 기간, 배송 주소의 시·군·구 기준 채널별 매출과 비중 (KD 매출은 추정 배분값)',
+  inputs: ['order_lines', 'channel_daily'],
+  fn: (lines, daily) => regionCalc('sgg', lines, daily),
+});
+</script>
+
+<script>
+// 기간 버튼
+document.querySelectorAll('#period button').forEach((b) => b.addEventListener('click', () => dash.setParams({ period: b.dataset.period })));
+dash.onData(() => {
+  const p = dash.params().period || 'month';
+  document.querySelectorAll('#period button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.period === p)));
+});
+
+(() => {
+  const S = 'channel_summary';
+  const row = (ch) => { const d = dash.data(S); return d.status === 'ok' && d.data ? d.data.find((r) => r.channel === ch) : null; };
+  const txt = (name, ch, f) => dash.draw(name, (el) => { const r = row(ch); el.textContent = r ? f(r) : '—'; });
+  txt('t-rev', '합계', (r) => PD.won(r.revenue));
+  txt('t-share', '폐쇄몰', (r) => PD.pct(r.share));
+  txt('t-ph', '합계', (r) => PD.int(r.pharmacies));
+  txt('t-re', '합계', (r) => PD.int(r.reorder_pharmacies));
+  for (const [p, ch] of [['fm', '폐쇄몰'], ['kd', 'KD']]) {
+    txt(p + '-rev', ch, (r) => PD.won(r.revenue));
+    txt(p + '-share', ch, (r) => PD.pct(r.share));
+    txt(p + '-qty', ch, (r) => PD.int(r.qty) + '개');
+    txt(p + '-cm', ch, (r) => PD.won(r.contribution));
+    txt(p + '-cmr', ch, (r) => PD.pct(r.margin));
+    txt(p + '-ph', ch, (r) => PD.int(r.pharmacies) + '곳');
+    txt(p + '-rr', ch, (r) => PD.pct(r.reorder_rate));
+  }
+  const info = (field) => (el) => { const d = dash.data('period_info'); el.textContent = d.status === 'ok' && d.data && d.data[0] ? d.data[0][field] : '—'; };
+  dash.draw('range', info('range'));
+  dash.draw('trend-unit', info('unit'));
+  const sw = (ch) => (el) => { el.style.background = PD.col(ch); };
+  for (const n of ['sw', 'lg1', 'lg2', 'lg3', 'lg4', 'lg5', 'lg6']) { dash.draw(n + '-fm', sw('폐쇄몰')); dash.draw(n + '-kd', sw('KD')); }
+})();
+</script>
+
+<script>
+window.PDC = {
+  tip(el) {
+    const t = document.createElement('div'); t.className = 'tip'; t.hidden = true; el.appendChild(t);
+    return {
+      show(ev, lines) {
+        t.replaceChildren(...lines.map((l) => { const d = document.createElement('div'); d.textContent = l; return d; }));
+        t.hidden = false;
+        const b = el.getBoundingClientRect();
+        let x = ev.clientX - b.left + 12, y = ev.clientY - b.top + 12;
+        if (x + t.offsetWidth > b.width) x = Math.max(0, ev.clientX - b.left - t.offsetWidth - 12);
+        t.style.left = x + 'px'; t.style.top = y + 'px';
+      },
+      hide() { t.hidden = true; },
+    };
+  },
+  status(el, d) {
+    if (d.status === 'ok' && d.data) return true;
+    el.replaceChildren();
+    const p = document.createElement('div'); p.className = 'muted';
+    p.textContent = d.status === 'error' ? '불러오지 못했어요' : '—';
+    el.appendChild(p);
+    return false;
+  },
+  empty(el, rows) {
+    if (rows.length) return false;
+    el.replaceChildren();
+    const p = document.createElement('div'); p.className = 'muted'; p.textContent = '이 기간에는 데이터가 없어요';
+    el.appendChild(p);
+    return true;
+  },
+  hbar(el, rows, fmt, extra, labelFn) {
+    const lab = (r) => (labelFn ? labelFn(r) : fmt(r.fm + r.kd));
+    el.replaceChildren();
+    const W = el.clientWidth || 360, bh = 22, gap = 6;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('role', 'img');
+    const meas = svg.append('g');
+    let lw = 0, vw = 0;
+    rows.forEach((r) => { lw = Math.max(lw, meas.append('text').text(r.label).node().getComputedTextLength()); });
+    rows.forEach((r) => { vw = Math.max(vw, meas.append('text').text(lab(r)).node().getComputedTextLength()); });
+    meas.remove();
+    lw = Math.min(lw + 8, W * 0.45);
+    vw = vw + 12;
+    const H = rows.length * (bh + gap);
+    svg.attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    const x = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.fm + r.kd) || 1]).range([0, Math.max(10, W - lw - vw)]);
+    const tip = PDC.tip(el);
+    const g = svg.selectAll('g.r').data(rows).join('g').attr('class', 'r').attr('transform', (r, i) => `translate(0,${i * (bh + gap)})`);
+    g.append('text').attr('x', lw - 8).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'end')
+      .text((r) => r.label).each(function () {
+        let s = this.textContent;
+        while (this.getComputedTextLength() > lw - 7 && s.length > 4) { s = s.slice(0, -1); this.textContent = s + '…'; }
+      });
+    g.append('rect').attr('x', lw).attr('height', bh).attr('width', (r) => x(r.fm)).style('fill', PD.col('폐쇄몰'));
+    g.append('rect').attr('x', (r) => lw + x(r.fm)).attr('height', bh).attr('width', (r) => x(r.kd)).style('fill', PD.col('KD'));
+    g.append('text').attr('x', (r) => lw + x(r.fm + r.kd) + 6).attr('y', bh / 2).attr('dy', '0.35em').text(lab);
+    g.append('rect').attr('width', W).attr('height', bh).style('fill', 'transparent')
+      .on('mousemove', (ev, r) => tip.show(ev, [r.label, `폐쇄몰 ${fmt(r.fm)}`, `KD ${fmt(r.kd)}`, ...(extra ? extra(r) : [])]))
+      .on('mouseleave', () => tip.hide());
+    return svg;
+  },
+  // 세로 누적 막대 (rows {key, fm, kd}), label(key) -> 축 글자
+  vbar(el, rows, label, fmtY, fmtV, aria) {
+    el.replaceChildren();
+    const W = el.clientWidth || 600, H = 240, m = { t: 10, r: 10, b: 24, l: 10 };
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', aria);
+    const y = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.fm + r.kd) || 1]).nice().range([H - m.b, m.t]);
+    const ya = svg.append('g').call(d3.axisLeft(y).ticks(4).tickFormat(fmtY));
+    let lw = 0; ya.selectAll('text').each(function () { lw = Math.max(lw, this.getComputedTextLength()); });
+    m.l = lw + 12; ya.attr('transform', `translate(${m.l},0)`);
+    ya.selectAll('.tick line').attr('x2', W - m.l - m.r); ya.select('.domain').remove();
+    const x = d3.scaleBand().domain(rows.map((r) => r.key)).range([m.l, W - m.r]).padding(0.2);
+    const step = Math.ceil(rows.length / Math.max(1, Math.floor((W - m.l) / 40)));
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`)
+      .call(d3.axisBottom(x).tickValues(rows.map((r) => r.key).filter((_, i) => i % step === 0)).tickFormat(label).tickSize(0)).select('.domain').remove();
+    const tip = PDC.tip(el);
+    const g = svg.selectAll('g.b').data(rows).join('g').attr('class', 'b');
+    g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', (r) => y(r.fm)).attr('height', (r) => y(0) - y(r.fm)).style('fill', PD.col('폐쇄몰'));
+    g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', (r) => y(r.fm + r.kd)).attr('height', (r) => y(r.fm) - y(r.fm + r.kd)).style('fill', PD.col('KD'));
+    g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
+      .on('mousemove', (ev, r) => tip.show(ev, [label(r.key), `폐쇄몰 ${fmtV(r.fm)}`, `KD ${fmtV(r.kd)}`, `합계 ${fmtV(r.fm + r.kd)}`]))
+      .on('mouseleave', () => tip.hide());
+  },
+  keyLabel: (k) => (k.length > 7 ? `${+k.slice(5, 7)}/${+k.slice(8)}` : `${+k.slice(5, 7)}월`),
+};
+</script>
+
+<script>
+dash.draw('trend-chart', (el) => {
+  const d = dash.data('revenue_trend');
+  if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
+  PDC.vbar(el, d.data, PDC.keyLabel, (v) => (v / 1e6).toLocaleString('ko-KR') + '백만', PD.won, '채널별 매출 추이 누적 막대');
+});
+
+dash.draw('product-chart', (el) => {
+  const d = dash.data('product_summary');
+  if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
+  const rows = d.data.slice(0, 15).map((r) => ({ label: r.product, fm: r.amount_fm, kd: r.amount_kd, qty: r.qty }));
+  PDC.hbar(el, rows, PD.won, (r) => [`판매량 ${PD.int(r.qty)}개`]).attr('aria-label', '제품별 매출 상위 15개 채널별 누적 막대');
+});
+
+dash.draw('prod-sel', (sel) => {
+  const d = dash.data('product_summary');
+  const list = d.status === 'ok' && d.data ? d.data.map((r) => r.product) : [];
+  sel.replaceChildren(...list.map((p) => new Option(p, p)));
+  if (!PD.state.product || !list.includes(PD.state.product)) PD.state.product = list[0] || null;
+  if (PD.state.product) sel.value = PD.state.product;
+  sel.onchange = () => { PD.state.product = sel.value; dash.draw('ptrend-chart'); };
+});
+
+dash.draw('ptrend-chart', (el) => {
+  const d = dash.data('order_lines');
+  const info = dash.data('period_info');
+  if (!PDC.status(el, d) || !PDC.status(el, info)) return;
+  const pi = info.data[0];
+  const ms = pi.months ? pi.months.split(',') : [];
+  const prod = PD.state.product;
+  const daily = pi.period === 'month';
+  let keys;
+  if (daily) {
+    const [y, mo] = (ms[0] || '2026-01').split('-').map(Number);
+    const n = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    keys = d3.range(1, n + 1).map((k) => `${ms[0]}-${String(k).padStart(2, '0')}`);
+  } else keys = ms;
+  const rows = keys.map((k) => ({ key: k, fm: 0, kd: 0 }));
+  const idx = new Map(rows.map((r) => [r.key, r]));
+  for (const r of d.data) {
+    if (r.product !== prod) continue;
+    const o = idx.get(daily ? r.date : r.month);
+    if (!o) continue;
+    if (r.channel === 'KD') o.kd += +r.qty || 0; else o.fm += +r.qty || 0;
+  }
+  if (PDC.empty(el, rows)) return;
+  PDC.vbar(el, rows, PDC.keyLabel, d3.format(',d'), (v) => PD.int(v) + '개', `${prod || ''} 판매량 추이`);
+});
+
+dash.draw('dist-chart', (el) => {
+  const d = dash.data('reorder_dist');
+  if (!PDC.status(el, d)) return;
+  PDC.hbar(el, d.data.map((r) => ({ label: r.bucket, fm: r.fm, kd: r.kd })), (v) => PD.int(v) + '곳').attr('aria-label', '발주 횟수 구간별 약국 수');
+});
+
+dash.draw('ph-rows', (tb) => {
+  const d = dash.data('pharmacy_summary');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const { phCh, phSort } = PD.state;
+  const rows = d.data.filter((r) => !phCh || r.channel === phCh).slice().sort((a, b) =>
+    phSort === 'last' ? b.last.localeCompare(a.last) : (+b[phSort] - +a[phSort]) || (+b.amount - +a.amount));
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    tr.dataset.key = encodeURIComponent(r.channel) + ',' + encodeURIComponent(r.pharmacy);
+    const cells = [[r.pharmacy], [r.channel], [PD.int(r.orders), 'n'], [PD.int(r.reorders), 'n'], [PD.int(r.amount), 'n'], [r.sgg], [r.last]];
+    for (const [v, c] of cells) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.appendChild(td); }
+    tb.appendChild(tr);
+  }
+});
+document.querySelectorAll('#ph-ch').forEach((s) => s.addEventListener('change', () => { PD.state.phCh = s.value; dash.draw('ph-rows'); }));
+document.querySelectorAll('#ph-sort').forEach((s) => s.addEventListener('change', () => { PD.state.phSort = s.value; dash.draw('ph-rows'); }));
+
+const regionDraw = (id, src, n, label) => dash.draw(id, (el) => {
+  const d = dash.data(src);
+  if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
+  PDC.hbar(el, d.data.slice(0, n).map((r) => ({ label: r.region, fm: r.amount_fm, kd: r.amount_kd, share: r.share })), PD.won,
+    (r) => [`전체 대비 ${PD.pct(r.share)}`], (r) => `${PD.won(r.fm + r.kd)} · ${PD.pct(r.share)}`).attr('aria-label', label);
+});
+regionDraw('sido-chart', 'region_summary', 20, '시도별 채널 매출 누적 막대');
+regionDraw('sgg-chart', 'sgg_summary', 12, '시군구별 매출 상위 12');
+</script>
+
+</div></div>
+
+<script>
+(() => {
+  let BLOB = null;
+  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const form = document.getElementById('lock-form'), input = document.getElementById('lock-pw'), msg = document.getElementById('lock-msg');
+  async function unlock(pw, remember) {
+    if (!BLOB) BLOB = await (await fetch('data.json', { cache: 'no-cache' })).json();
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(BLOB.s), iterations: BLOB.n, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(BLOB.i) }, key, b64(BLOB.c));
+    const text = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    const obj = JSON.parse(text);
+    if (remember) { try { sessionStorage.setItem('pd-pw', pw); } catch (e) {} }
+    document.getElementById('lock').hidden = true;
+    document.getElementById('app').hidden = false;
+    document.getElementById('built').textContent = obj.built;
+    dash._load({ channel_daily: obj.channel_daily, order_lines: obj.order_lines });
+  }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); msg.textContent = '확인 중…';
+    try { await unlock(input.value, true); msg.textContent = ''; }
+    catch (err) { msg.textContent = '비밀번호가 맞지 않아요.'; input.select(); }
+  });
+  let saved = null; try { saved = sessionStorage.getItem('pd-pw'); } catch (e) {}
+  if (saved) unlock(saved, false).catch(() => {});
+})();
+</script>
+
+</body>
+</html>
