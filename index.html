@@ -27,7 +27,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 </head>
 <body>
 <div id="lock"><form class="box" id="lock-form">
-  <h1>약국 매출 대시보드</h1><p>폐쇄몰 · KD 내부용 자료예요. 비밀번호를 입력해 주세요.</p>
+  <h1>약국 매출 대시보드</h1><p>폐쇄몰 · KD 내부용 자료. 비밀번호 입력.</p>
   <input id="lock-pw" type="password" autocomplete="current-password" placeholder="비밀번호" required autofocus>
   <button type="submit">열기</button><div id="lock-msg" role="alert"></div>
 </form></div>
@@ -126,7 +126,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         <button type="button" data-period="year" aria-pressed="false">2026년 전체</button>
       </div>
     </div>
-    <p class="lead">이 기간 두 채널 합계 매출은 <b data-draw="t-rev" data-source="channel_summary" data-field="revenue" data-where="channel=합계">—</b>이며, 이 중 폐쇄몰이 <b data-draw="t-share" data-source="channel_summary" data-field="share" data-where="channel=폐쇄몰">—</b>를 차지해요. 주문한 약국 <b data-draw="t-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=합계">—</b>곳 중 <b data-draw="t-re" data-source="channel_summary" data-field="reorder_pharmacies" data-where="channel=합계">—</b>곳이 두 번 이상 발주했어요.</p>
+    <p class="lead">이 기간 두 채널 합계 매출 <b data-draw="t-rev" data-source="channel_summary" data-field="revenue" data-where="channel=합계">—</b>, 이 중 폐쇄몰 비중 <b data-draw="t-share" data-source="channel_summary" data-field="share" data-where="channel=폐쇄몰">—</b>. 주문한 약국 <b data-draw="t-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=합계">—</b>곳 중 <b data-draw="t-re" data-source="channel_summary" data-field="reorder_pharmacies" data-where="channel=합계">—</b>곳이 두 번 이상 발주.</p>
   </header>
 
   <section id="channels">
@@ -229,16 +229,17 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
   <details id="notes">
     <summary>데이터 기준과 유의사항</summary>
     <ul>
-      <li><b>기간</b>: ‘이번 달’은 데이터가 있는 가장 최근 달, ‘최근 3개월’은 그 달을 포함한 3개월, ‘2026년 전체’는 2026년의 모든 월 파일이에요. 드라이브에서 읽을 수 없는 달은 빠져요.</li>
-      <li><b>채널 매출·판매량·공헌이익</b>: 각 월 시트의 ‘폐쇄몰_매출’, ‘KD_매출’ 탭 일별 값을 그대로 썼어요.</li>
-      <li><b>폐쇄몰 제품·약국·지역 매출</b>: ‘폐쇄몰 주문원장’의 상품구매금액(환불·할인 차감 전)이에요. 발주일이 빈 행은 주문번호 앞자리 날짜로 채웠어요. 시트의 ‘폐쇄몰_매출’ 탭은 탭에 등록된 상품만 더하기 때문에, 새 상품이 있던 달(2·3·8월 등)은 원장 합계가 시트보다 최대 6% 정도 많아요. 채널 카드는 시트 값, 제품·약국·지역은 원장 값이에요.</li>
-      <li><b>KD 제품·약국·지역 매출은 추정치예요.</b> KD 주문원장에 금액이 없는 달이 있어서, ‘KD_매출’ 탭의 일별 매출을 그날 주문 수량 비율로 배분했어요. 채널 합계는 시트와 같아요.</li>
-      <li><b>KD 판매량</b>: 채널 카드는 ‘KD_매출’ 탭 판매량이고, 제품 차트는 주문원장 수량이에요. 11월은 원장 1,280개, 시트 780개로 차이가 있어요.</li>
-      <li><b>제품명 통일</b>: 채널·달마다 다른 상품명을 키워드 규칙으로 하나로 맞췄어요. 옵션(댕글러·POP)과 [예약 판매] 같은 머리말은 무시했고, ‘레티놀/레티날 아이백 크림 10ml’, ‘TX 기미 세럼/앰플 알엑스’는 같은 제품으로 봤어요. 세트는 낱개로 풀지 않았어요.</li>
-      <li><b>약국 구분</b>: 폐쇄몰은 월 시트의 약국 목록 탭(약국명·고객명·연락처)으로 약국명을 찾았고, 거기서 못 찾으면 입점·회원 리스트와 KD 원장에서 같은 배송 주소(도로명+건물번호)나 전화번호의 약국으로 찾아요. 그래도 못 찾은 주문은 ‘미확인(주문자 이름)’으로 표시돼요. KD는 주문원장의 약국명에서 아이디를 뺀 이름이에요(이름이 같은 다른 약국은 상권을 붙여 구분). 레디영·베리뉴·도레미약국처럼 한 계정으로 여러 지점에 보내는 주문은 배송지로 지점을 나눠요: 입점 리스트에 그 주소의 지점이 있으면 그 이름, 없으면 ‘레디영약국 성수점’처럼 상권 이름을 붙였어요.</li>
-      <li><b>지역·상권</b>: 배송 주소로 시·도, 시·군·구를 나누고, 도로명·동 이름으로 상권(명동, 홍대, 성수, 강남역, 서면, 남포·광복 등)을 정했어요. 상권 규칙에 없는 곳은 시·군·구로 표시돼요.</li>
-      <li><b>내부 테스트 계정</b>(김서연, 박채은, 김도윤)의 폐쇄몰 주문은 제품·약국·지역 집계에서 뺐어요. 채널 카드의 매출은 시트 값이라 이 주문이 포함돼 있을 수 있어요(3월 224만원, 4월 146만원, 10월 319만원).</li>
-      <li>바로팜·이팜은 제외했어요.</li>
+      <li><b>기간</b>: ‘이번 달’은 데이터가 있는 가장 최근 달, ‘최근 3개월’은 그 달 포함 3개월, ‘2026년 전체’는 2026년 모든 월 파일. 드라이브에서 읽을 수 없는 달은 제외.</li>
+      <li><b>채널 매출·판매량·공헌이익</b>: 각 월 시트 ‘폐쇄몰_매출’, ‘KD_매출’ 탭의 일별 값 그대로 사용.</li>
+      <li><b>폐쇄몰 제품·약국·지역 매출</b>: ‘폐쇄몰 주문원장’의 상품구매금액(환불·할인 차감 전). 발주일이 빈 행은 주문번호 앞자리 날짜로 보완. 시트 ‘폐쇄몰_매출’ 탭은 등록된 상품만 합산하므로, 새 상품이 있던 달(2·3·8월 등)은 원장 합계가 시트보다 최대 6% 정도 많음. 채널 카드는 시트 값, 제품·약국·지역은 원장 값.</li>
+      <li><b>KD 제품·약국·지역 매출은 추정치.</b> KD 주문원장에 금액이 없는 달이 있어 ‘KD_매출’ 탭의 일별 매출을 그날 주문 수량 비율로 배분. 채널 합계는 시트와 동일.</li>
+      <li><b>KD 판매량</b>: 채널 카드는 ‘KD_매출’ 탭 판매량, 제품 차트는 주문원장 수량. 11월은 원장 1,280개, 시트 780개로 차이 있음.</li>
+      <li><b>제품명 통일</b>: 채널·월마다 다른 상품명을 키워드 규칙으로 통일. 옵션(댕글러·POP)과 [예약 판매] 같은 머리말은 무시, ‘레티놀/레티날 아이백 크림 10ml’, ‘TX 기미 세럼/앰플 알엑스’는 같은 제품으로 처리. 세트는 낱개로 풀지 않음.</li>
+      <li><b>약국 구분</b>: 폐쇄몰은 월 시트의 약국 목록 탭(약국명·고객명·연락처)으로 약국명 확인, 없으면 입점·회원 리스트와 KD 원장에서 같은 배송 주소(도로명+건물번호)나 전화번호의 약국으로 매칭. 그래도 못 찾은 주문은 ‘미확인(주문자 이름)’으로 표시. KD는 주문원장 약국명에서 아이디를 뺀 이름(이름이 같은 다른 약국은 상권을 붙여 구분).</li>
+      <li><b>체인 약국 지점</b>: 레디영·베리뉴약국처럼 한 계정으로 여러 지점에 보내는 주문은 배송지로 지점 구분, ‘레디영약국(명동타운)’처럼 ‘약국명(지점명)’으로 표시(지점명은 공식 매장명 기준). 도레미약국은 본사(주흥길 9) 일괄 주문이라 지점 구분 없이 ‘도레미약국’. 아직 등록되지 않은 새 배송지는 ‘약국명(상권)’으로 임시 표시. KD·폐쇄몰 동일 규칙.</li>
+      <li><b>지역·상권</b>: 배송 주소로 시·도, 시·군·구 구분, 도로명·동 이름으로 상권(명동, 홍대, 성수, 강남역, 서면, 남포·광복 등) 지정. 상권 규칙에 없는 곳은 시·군·구로 표시.</li>
+      <li><b>내부 테스트 계정</b>(김서연, 박채은, 김도윤)의 폐쇄몰 주문은 제품·약국·지역 집계에서 제외. 채널 카드 매출은 시트 값이라 이 주문이 포함됐을 수 있음(3월 224만원, 4월 146만원, 10월 319만원).</li>
+      <li>바로팜·이팜 제외.</li>
     </ul>
   </details>
 </div>
@@ -463,14 +464,14 @@ window.PDC = {
     if (d.status === 'ok' && d.data) return true;
     el.replaceChildren();
     const p = document.createElement('div'); p.className = 'muted';
-    p.textContent = d.status === 'error' ? '불러오지 못했어요' : '—';
+    p.textContent = d.status === 'error' ? '불러오기 실패' : '—';
     el.appendChild(p);
     return false;
   },
   empty(el, rows) {
     if (rows.length) return false;
     el.replaceChildren();
-    const p = document.createElement('div'); p.className = 'muted'; p.textContent = '이 기간에는 데이터가 없어요';
+    const p = document.createElement('div'); p.className = 'muted'; p.textContent = '이 기간 데이터 없음';
     el.appendChild(p);
     return true;
   },
@@ -644,7 +645,7 @@ regionDraw('sgg-chart', 'sgg_summary', 12, '상권별 매출 상위 12');
   form.addEventListener('submit', async (e) => {
     e.preventDefault(); msg.textContent = '확인 중…';
     try { await unlock(input.value, true); msg.textContent = ''; }
-    catch (err) { msg.textContent = '비밀번호가 맞지 않아요.'; input.select(); }
+    catch (err) { msg.textContent = '비밀번호 불일치.'; input.select(); }
   });
   let saved = null; try { saved = sessionStorage.getItem('pd-pw'); } catch (e) {}
   if (saved) unlock(saved, false).catch(() => {});
