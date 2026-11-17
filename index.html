@@ -195,12 +195,14 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         <h2>약국 목록</h2>
         <div class="ctrl"><label for="ph-ch">채널</label>
           <select id="ph-ch" class="dash-select" aria-label="채널"><option value="">전체</option><option value="폐쇄몰">폐쇄몰</option><option value="KD">KD</option></select>
+          <label for="ph-area">상권</label>
+          <select id="ph-area" class="dash-select" data-draw="ph-area" aria-label="상권" data-source="pharmacy_summary"></select>
           <label for="ph-sort">정렬</label>
           <select id="ph-sort" class="dash-select" aria-label="정렬"><option value="orders">발주 횟수</option><option value="amount">매출</option><option value="last">최근 발주일</option></select>
         </div>
         <div class="tw">
           <table data-source="pharmacy_summary" data-row-key="channel,pharmacy">
-            <thead><tr><th data-field="pharmacy">약국</th><th data-field="channel">채널</th><th data-field="orders" class="n">발주</th><th data-field="reorders" class="n">재발주</th><th data-field="amount" class="n">매출(원)</th><th data-field="sgg">지역</th><th data-field="last">최근 발주</th></tr></thead>
+            <thead><tr><th data-field="pharmacy">약국</th><th data-field="channel">채널</th><th data-field="orders" class="n">발주</th><th data-field="reorders" class="n">재발주</th><th data-field="amount" class="n">매출(원)</th><th data-field="area">상권</th><th data-field="sgg">시·군·구</th><th data-field="last">최근 발주</th></tr></thead>
             <tbody data-draw="ph-rows"></tbody>
           </table>
         </div>
@@ -217,7 +219,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         <div class="chart" data-draw="sido-chart" data-source="region_summary"></div>
       </div>
       <div class="card" id="region-sgg">
-        <h2>시·군·구별 매출 상위 12</h2>
+        <h2>상권별 매출 상위 12</h2>
         <div class="legend"><span><i class="sw" data-draw="lg6-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg6-kd"></i>KD</span></div>
         <div class="chart" data-draw="sgg-chart" data-source="sgg_summary"></div>
       </div>
@@ -229,12 +231,13 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
     <ul>
       <li><b>기간</b>: ‘이번 달’은 데이터가 있는 가장 최근 달, ‘최근 3개월’은 그 달을 포함한 3개월, ‘2026년 전체’는 2026년의 모든 월 파일이에요. 드라이브에서 읽을 수 없는 달은 빠져요.</li>
       <li><b>채널 매출·판매량·공헌이익</b>: 각 월 시트의 ‘폐쇄몰_매출’, ‘KD_매출’ 탭 일별 값을 그대로 썼어요.</li>
-      <li><b>폐쇄몰 제품·약국·지역 매출</b>: ‘폐쇄몰 주문원장’의 상품구매금액(환불·할인 차감 전)이에요. 발주일이 빈 행은 주문번호 앞자리 날짜로 채워서, 시트 매출과 1% 안쪽 차이가 나요.</li>
+      <li><b>폐쇄몰 제품·약국·지역 매출</b>: ‘폐쇄몰 주문원장’의 상품구매금액(환불·할인 차감 전)이에요. 발주일이 빈 행은 주문번호 앞자리 날짜로 채웠어요. 시트의 ‘폐쇄몰_매출’ 탭은 탭에 등록된 상품만 더하기 때문에, 새 상품이 있던 달(2·3·8월 등)은 원장 합계가 시트보다 최대 6% 정도 많아요. 채널 카드는 시트 값, 제품·약국·지역은 원장 값이에요.</li>
       <li><b>KD 제품·약국·지역 매출은 추정치예요.</b> KD 주문원장에 금액이 없는 달이 있어서, ‘KD_매출’ 탭의 일별 매출을 그날 주문 수량 비율로 배분했어요. 채널 합계는 시트와 같아요.</li>
       <li><b>KD 판매량</b>: 채널 카드는 ‘KD_매출’ 탭 판매량이고, 제품 차트는 주문원장 수량이에요. 11월은 원장 1,280개, 시트 780개로 차이가 있어요.</li>
       <li><b>제품명 통일</b>: 채널·달마다 다른 상품명을 키워드 규칙으로 하나로 맞췄어요. 옵션(댕글러·POP)과 [예약 판매] 같은 머리말은 무시했고, ‘레티놀/레티날 아이백 크림 10ml’, ‘TX 기미 세럼/앰플 알엑스’는 같은 제품으로 봤어요. 세트는 낱개로 풀지 않았어요.</li>
-      <li><b>약국 구분</b>: 폐쇄몰은 월 시트의 약국 목록 탭(약국명·고객명·연락처)으로 약국명을 찾았고, 못 찾은 주문은 ‘주문자 이름’으로 표시돼요. KD는 주문원장의 약국명(아이디 포함) 기준이에요.</li>
-      <li><b>지역</b>: 배송 주소의 시·도와 시·군·구로 나눴어요.</li>
+      <li><b>약국 구분</b>: 폐쇄몰은 월 시트의 약국 목록 탭(약국명·고객명·연락처)으로 약국명을 찾았고, 거기서 못 찾으면 입점·회원 리스트와 KD 원장에서 같은 배송 주소(도로명+건물번호)나 전화번호의 약국으로 찾아요. 그래도 못 찾은 주문은 ‘미확인(주문자 이름)’으로 표시돼요. KD는 주문원장의 약국명에서 아이디를 뺀 이름이에요(이름이 같은 다른 약국은 상권을 붙여 구분). 레디영·베리뉴·도레미약국처럼 한 계정으로 여러 지점에 보내는 주문은 배송지로 지점을 나눠요: 입점 리스트에 그 주소의 지점이 있으면 그 이름, 없으면 ‘레디영약국 성수점’처럼 상권 이름을 붙였어요.</li>
+      <li><b>지역·상권</b>: 배송 주소로 시·도, 시·군·구를 나누고, 도로명·동 이름으로 상권(명동, 홍대, 성수, 강남역, 서면, 남포·광복 등)을 정했어요. 상권 규칙에 없는 곳은 시·군·구로 표시돼요.</li>
+      <li><b>내부 테스트 계정</b>(김서연, 박채은, 김도윤)의 폐쇄몰 주문은 제품·약국·지역 집계에서 뺐어요. 채널 카드의 매출은 시트 값이라 이 주문이 포함돼 있을 수 있어요(3월 224만원, 4월 146만원, 10월 319만원).</li>
       <li>바로팜·이팜은 제외했어요.</li>
     </ul>
   </details>
@@ -292,15 +295,17 @@ dash.calc('pharmacy_summary', {
     const m = new Map();
     for (const r of inPeriod(lines, daily)) {
       const k = r.channel + '|' + r.pharmacy;
-      const o = m.get(k) || { channel: r.channel, pharmacy: r.pharmacy, dates: new Set(), amount: 0, regions: new Map(), last: '' };
+      const o = m.get(k) || { channel: r.channel, pharmacy: r.pharmacy, dates: new Set(), amount: 0, regions: new Map(), areas: new Map(), last: '' };
       o.dates.add(r.date); o.amount += +r.amount || 0;
       o.regions.set(r.sgg, (o.regions.get(r.sgg) || 0) + 1);
+      o.areas.set(r.area, (o.areas.get(r.area) || 0) + 1);
       if (r.date > o.last) o.last = r.date;
       m.set(k, o);
     }
     return [...m.values()].map((o) => {
       const sgg = [...o.regions.entries()].sort((a, b) => b[1] - a[1])[0][0];
-      return { channel: o.channel, pharmacy: o.pharmacy, orders: o.dates.size, reorders: o.dates.size - 1, amount: o.amount, sgg, sido: sgg.split(' ')[0], last: o.last };
+      const area = [...o.areas.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      return { channel: o.channel, pharmacy: o.pharmacy, orders: o.dates.size, reorders: o.dates.size - 1, amount: o.amount, sgg, area, sido: sgg.split(' ')[0], last: o.last };
     }).sort((a, b) => b.amount - a.amount);
   },
 });
@@ -398,10 +403,10 @@ dash.calc('region_summary', {
   fn: (lines, daily) => regionCalc('sido', lines, daily),
 });
 dash.calc('sgg_summary', {
-  title: '시·군·구별 매출',
-  description: '선택한 기간, 배송 주소의 시·군·구 기준 채널별 매출과 비중 (KD 매출은 추정 배분값)',
+  title: '상권별 매출',
+  description: '선택한 기간, 배송 주소로 나눈 상권(명동·홍대·성수 등) 기준 채널별 매출과 비중 (KD 매출은 추정 배분값)',
   inputs: ['order_lines', 'channel_daily'],
-  fn: (lines, daily) => regionCalc('sgg', lines, daily),
+  fn: (lines, daily) => regionCalc('area', lines, daily),
 });
 </script>
 
@@ -585,15 +590,23 @@ dash.draw('ph-rows', (tb) => {
   tb.replaceChildren();
   if (d.status !== 'ok' || !d.data) return;
   const { phCh, phSort } = PD.state;
-  const rows = d.data.filter((r) => !phCh || r.channel === phCh).slice().sort((a, b) =>
+  const rows = d.data.filter((r) => (!phCh || r.channel === phCh) && (!PD.state.phArea || r.area === PD.state.phArea)).slice().sort((a, b) =>
     phSort === 'last' ? b.last.localeCompare(a.last) : (+b[phSort] - +a[phSort]) || (+b.amount - +a.amount));
   for (const r of rows) {
     const tr = document.createElement('tr');
     tr.dataset.key = encodeURIComponent(r.channel) + ',' + encodeURIComponent(r.pharmacy);
-    const cells = [[r.pharmacy], [r.channel], [PD.int(r.orders), 'n'], [PD.int(r.reorders), 'n'], [PD.int(r.amount), 'n'], [r.sgg], [r.last]];
+    const cells = [[r.pharmacy], [r.channel], [PD.int(r.orders), 'n'], [PD.int(r.reorders), 'n'], [PD.int(r.amount), 'n'], [r.area], [r.sgg], [r.last]];
     for (const [v, c] of cells) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.appendChild(td); }
     tb.appendChild(tr);
   }
+});
+dash.draw('ph-area', (sel) => {
+  const d = dash.data('pharmacy_summary');
+  const areas = d.status === 'ok' && d.data ? [...new Set(d.data.map((r) => r.area))].sort((a, b) => a.localeCompare(b, 'ko')) : [];
+  sel.replaceChildren(new Option('전체', ''), ...areas.map((a) => new Option(a, a)));
+  if (PD.state.phArea && !areas.includes(PD.state.phArea)) PD.state.phArea = '';
+  sel.value = PD.state.phArea || '';
+  sel.onchange = () => { PD.state.phArea = sel.value; dash.draw('ph-rows'); };
 });
 document.querySelectorAll('#ph-ch').forEach((s) => s.addEventListener('change', () => { PD.state.phCh = s.value; dash.draw('ph-rows'); }));
 document.querySelectorAll('#ph-sort').forEach((s) => s.addEventListener('change', () => { PD.state.phSort = s.value; dash.draw('ph-rows'); }));
@@ -605,7 +618,7 @@ const regionDraw = (id, src, n, label) => dash.draw(id, (el) => {
     (r) => [`전체 대비 ${PD.pct(r.share)}`], (r) => `${PD.won(r.fm + r.kd)} · ${PD.pct(r.share)}`).attr('aria-label', label);
 });
 regionDraw('sido-chart', 'region_summary', 20, '시도별 채널 매출 누적 막대');
-regionDraw('sgg-chart', 'sgg_summary', 12, '시군구별 매출 상위 12');
+regionDraw('sgg-chart', 'sgg_summary', 12, '상권별 매출 상위 12');
 </script>
 
 </div></div>
