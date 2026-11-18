@@ -209,13 +209,13 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
     <div class="grid2">
       <div class="card" id="product-rank">
         <h2>제품별 매출 상위 15 <span class="muted" data-draw="tag-pr"></span></h2>
-        <div class="legend"><span><i class="sw" data-draw="lg2-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg2-kd"></i>KD</span><span><i class="sw" data-draw="lg2-bp"></i>바로팜</span></div>
+        
         <div class="chart" data-draw="product-chart" data-source="product_summary"></div>
       </div>
       <div class="card" id="product-trend">
         <h2>제품별 판매량 추이</h2>
         <div class="ctrl"><label for="prod-sel">제품</label><select id="prod-sel" class="dash-select" data-draw="prod-sel" aria-label="제품 선택" data-source="product_summary"></select></div>
-        <div class="legend"><span><i class="sw" data-draw="lg3-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg3-kd"></i>KD</span><span><i class="sw" data-draw="lg3-bp"></i>바로팜</span></div>
+        
         <div class="chart" data-draw="ptrend-chart" data-source="order_lines"></div>
       </div>
     </div>
@@ -268,12 +268,12 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
     <div class="grid2">
       <div class="card" id="region-sido">
         <h2>시·도별 매출</h2>
-        <div class="legend"><span><i class="sw" data-draw="lg5-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg5-kd"></i>KD</span><span><i class="sw" data-draw="lg5-bp"></i>바로팜</span></div>
+        
         <div class="chart" data-draw="sido-chart" data-source="region_summary"></div>
       </div>
       <div class="card" id="region-sgg">
         <h2>상권별 매출 상위 12</h2>
-        <div class="legend"><span><i class="sw" data-draw="lg6-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg6-kd"></i>KD</span><span><i class="sw" data-draw="lg6-bp"></i>바로팜</span></div>
+        
         <div class="chart" data-draw="sgg-chart" data-source="sgg_summary"></div>
       </div>
     </div>
@@ -572,9 +572,11 @@ window.PDC = {
     el.appendChild(p);
     return true;
   },
+  // rows 에 total 이 있으면 채널 구분 없이 한 색 막대
   hbar(el, rows, fmt, extra, labelFn) {
-    const tot = PD.sum;
-    const chs = PD.CH.map((ch, i) => [ch, PD.KEYS[i], i]).filter(([, k]) => rows.some((r) => +r[k]));
+    const one = rows.length > 0 && rows[0].total != null;
+    const tot = one ? (r) => +r.total || 0 : PD.sum;
+    const chs = one ? [['합계', 'total', 0]] : PD.CH.map((ch, i) => [ch, PD.KEYS[i], i]).filter(([, k]) => rows.some((r) => +r[k]));
     const lab = (r) => (labelFn ? labelFn(r) : fmt(tot(r)));
     el.replaceChildren();
     const W = el.clientWidth || 360, bh = 22, gap = 6;
@@ -611,8 +613,9 @@ window.PDC = {
     el.replaceChildren();
     const W = el.clientWidth || 600, H = 240, m = { t: 10, r: 10, b: 24, l: 10 };
     const svg = d3.select(el).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', aria);
-    const tot = PD.sum;
-    const chs = PD.CH.map((ch, i) => [ch, PD.KEYS[i], i]).filter(([, k]) => rows.some((r) => +r[k]));
+    const one = rows.length > 0 && rows[0].total != null;
+    const tot = one ? (r) => +r.total || 0 : PD.sum;
+    const chs = one ? [['합계', 'total', 0]] : PD.CH.map((ch, i) => [ch, PD.KEYS[i], i]).filter(([, k]) => rows.some((r) => +r[k]));
     const y = d3.scaleLinear().domain([0, d3.max(rows, tot) || 1]).nice().range([H - m.b, m.t]);
     const ya = svg.append('g').call(d3.axisLeft(y).ticks(4).tickFormat(fmtY));
     let lw = 0; ya.selectAll('text').each(function () { lw = Math.max(lw, this.getComputedTextLength()); });
@@ -630,7 +633,7 @@ window.PDC = {
         .attr('height', (r) => y(below(r)) - y(below(r) + (+r[k] || 0))).style('fill', PD.col(ch));
     });
     g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
-      .on('mousemove', (ev, r) => tip.show(ev, [label(r.key), ...chs.map(([ch, k]) => `${ch} ${fmtV(+r[k] || 0)}`), `합계 ${fmtV(tot(r))}`]))
+      .on('mousemove', (ev, r) => tip.show(ev, [label(r.key), ...(one ? [] : chs.map(([ch, k]) => `${ch} ${fmtV(+r[k] || 0)}`)), `합계 ${fmtV(tot(r))}`]))
       .on('mouseleave', () => tip.hide());
   },
   keyLabel: (k) => (k.length > 7 ? `${+k.slice(5, 7)}/${+k.slice(8)}` : `${+k.slice(5, 7)}월`),
@@ -647,8 +650,8 @@ dash.draw('trend-chart', (el) => {
 dash.draw('product-chart', (el) => {
   const d = dash.data('product_summary');
   if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
-  const rows = d.data.slice(0, 15).map((r) => ({ label: r.product, fm: r.amount_fm, kd: r.amount_kd, bp: r.amount_bp, qty: r.qty }));
-  PDC.hbar(el, rows, PD.won, (r) => [`판매량 ${PD.int(r.qty)}개`]).attr('aria-label', '제품별 매출 상위 15개 채널별 누적 막대');
+  const rows = d.data.slice(0, 15).map((r) => ({ label: r.product, total: r.amount, qty: r.qty }));
+  PDC.hbar(el, rows, PD.won, (r) => [`판매량 ${PD.int(r.qty)}개`]).attr('aria-label', '제품별 매출 상위 15개 막대');
 });
 
 dash.draw('prod-sel', (sel) => {
@@ -674,13 +677,13 @@ dash.draw('ptrend-chart', (el) => {
     const n = new Date(Date.UTC(y, mo, 0)).getUTCDate();
     keys = d3.range(1, n + 1).map((k) => `${ms[0]}-${String(k).padStart(2, '0')}`);
   } else keys = ms;
-  const rows = keys.map((k) => ({ key: k, fm: 0, kd: 0, bp: 0 }));
+  const rows = keys.map((k) => ({ key: k, total: 0 }));
   const idx = new Map(rows.map((r) => [r.key, r]));
   for (const r of d.data) {
     if (r.product !== prod) continue;
     const o = idx.get(daily ? r.date : r.month);
     if (!o) continue;
-    o[PD.key(r.channel)] += +r.qty || 0;
+    o.total += +r.qty || 0;
   }
   if (PDC.empty(el, rows)) return;
   PDC.vbar(el, rows, PDC.keyLabel, d3.format(',d'), (v) => PD.int(v) + '개', `${prod || ''} 판매량 추이`);
@@ -759,10 +762,10 @@ document.querySelectorAll('#ph-re').forEach((s) => s.addEventListener('change', 
 const regionDraw = (id, src, n, label) => dash.draw(id, (el) => {
   const d = dash.data(src);
   if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
-  PDC.hbar(el, d.data.slice(0, n).map((r) => ({ label: r.region, fm: r.amount_fm, kd: r.amount_kd, bp: r.amount_bp, share: r.share })), PD.won,
-    (r) => [`전체 대비 ${PD.pct(r.share)}`], (r) => `${PD.won(r.fm + r.kd + r.bp)} · ${PD.pct(r.share)}`).attr('aria-label', label);
+  PDC.hbar(el, d.data.slice(0, n).map((r) => ({ label: r.region, total: r.amount, share: r.share })), PD.won,
+    (r) => [`전체 대비 ${PD.pct(r.share)}`], (r) => `${PD.won(r.total)} · ${PD.pct(r.share)}`).attr('aria-label', label);
 });
-regionDraw('sido-chart', 'region_summary', 20, '시도별 채널 매출 누적 막대');
+regionDraw('sido-chart', 'region_summary', 20, '시도별 매출 막대');
 regionDraw('sgg-chart', 'sgg_summary', 12, '상권별 매출 상위 12');
 </script>
 
