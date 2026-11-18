@@ -58,7 +58,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
   };
   const refresh = () => { cache = {}; listeners.forEach((f) => f()); Object.keys(draws).forEach(runDraw); };
   window.dash = {
-    colors: ['#2f6fdb', '#e8833a', '#3aa676', '#b04fc9'],
+    colors: ['#2f6fdb', '#e8833a', '#3aa676', '#b04fc9', '#c9a227'],
     data: get,
     calc: (id, def) => { calcs[id] = def; },
     loader: () => {},
@@ -84,7 +84,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd .sub{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption);margin:var(--cds-gap-xs) 0 0}
 .pd .lead{margin:var(--cds-gap-sm) 0 0;font-size:var(--cds-font-size-body);line-height:1.6}
 .pd .card{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-lg)}
-.pd .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--cds-gap-md)}
+.pd .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--cds-gap-md)}
 .pd .tile h3{margin:0;font-size:var(--cds-font-size-body);font-weight:var(--cds-font-weight-medium);display:flex;align-items:center;gap:6px}
 .pd .sw{display:inline-block;width:10px;height:10px;border-radius:2px}
 .pd .big{font-family:var(--font-anthropic-sans);font-weight:700;letter-spacing:-0.02em;font-size:2rem;margin:var(--cds-gap-xs) 0;font-variant-numeric:tabular-nums}
@@ -104,7 +104,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd .seg button[aria-pressed="true"]{background:var(--color-panel);color:var(--color-fg);font-weight:var(--cds-font-weight-medium)}
 .pd .bar{display:flex;gap:var(--cds-gap-md);align-items:center;flex-wrap:wrap}
 .pd .tw{overflow-x:auto}
-.pd #pharmacy-table{grid-column:1/-1}
+.pd .stack{display:flex;flex-direction:column;gap:var(--cds-gap-md)}
 .pd table{border-collapse:collapse;width:100%;font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums}
 .pd th,.pd td{padding:6px 8px;border-bottom:1px solid var(--color-border-line);text-align:left;white-space:nowrap}
 .pd th{position:sticky;top:0;background:var(--color-panel);font-weight:var(--cds-font-weight-medium);color:var(--color-fg-muted)}
@@ -119,7 +119,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 
 <div class="pd" data-read lang="ko">
   <header>
-    <h1>약국 매출 대시보드 · 폐쇄몰 · KD · 바로팜</h1>
+    <h1>약국 매출 대시보드</h1>
     <p class="sub">집계 기간 <span data-draw="range" data-source="period_info" data-field="range">—</span> · 매주 월요일 오전 갱신 · 마지막 갱신 <span id="built">—</span></p>
     <div class="bar" style="margin-top:var(--cds-gap-md)">
       <div class="seg" role="group" aria-label="기간" id="period">
@@ -127,13 +127,14 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         <button type="button" data-period="3m" aria-pressed="false">최근 3개월</button>
         <button type="button" data-period="year" aria-pressed="false">2026년 전체</button>
       </div>
+      <span class="muted" data-draw="basis" data-source="period_info" data-field="basis"></span>
     </div>
-    <p class="lead">이 기간 세 채널 합계 매출 <b data-draw="t-rev" data-source="channel_summary" data-field="revenue" data-where="channel=합계">—</b>, 이 중 폐쇄몰 비중 <b data-draw="t-share" data-source="channel_summary" data-field="share" data-where="channel=폐쇄몰">—</b>. 주문한 약국 <b data-draw="t-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=합계">—</b>곳 중 <b data-draw="t-re" data-source="channel_summary" data-field="reorder_pharmacies" data-where="channel=합계">—</b>곳이 두 번 이상 발주.</p>
+    <p class="lead"><span data-draw="lead-pre">이 기간</span> 채널 합계 매출(셀인) <b data-draw="t-rev" data-source="channel_summary" data-field="revenue" data-where="channel=합계">—</b>, 이 중 폐쇄몰 비중 <b data-draw="t-share" data-source="channel_summary" data-field="share" data-where="channel=폐쇄몰">—</b>. <span data-draw="lead-pre2">주문한 약국</span> <b data-draw="t-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=합계">—</b>곳 중 <b data-draw="t-re" data-source="channel_summary" data-field="reorder_pharmacies" data-where="channel=합계">—</b>곳이 <span data-draw="lead-re">두 번 이상 발주</span>.</p>
   </header>
 
   <section id="channels">
-    <h2>채널별 매출</h2>
-    <p class="muted">매출: 폐쇄몰·KD는 할인·적립금·환불 차감 전 공급 매출, 바로팜은 주문원장 실주문금액(할인 후). 공헌이익은 시트 계산값(바로팜은 자료 없음)</p>
+    <h2>채널별 매출 <span class="muted" data-draw="tag-ch"></span></h2>
+    <p class="muted">채널 매출(셀인): 각 월 시트의 채널별 매출 탭(폐쇄몰_매출·KD_매출·바로팜_매출·이팜_매출·온누리_매출) 값. 공헌이익은 시트 계산값. 주문 약국·재발주는 주문원장(셀아웃) 기준이라 이팜·온누리는 없음</p>
     <div class="tiles">
       <div class="card tile" id="tile-fm">
         <h3><span class="sw" data-draw="sw-fm"></span>폐쇄몰</h3>
@@ -171,10 +172,34 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
           <dt>재발주 약국 비율</dt><dd data-draw="bp-rr" data-source="channel_summary" data-field="reorder_rate" data-where="channel=바로팜">—</dd>
         </dl>
       </div>
+      <div class="card tile" id="tile-ep">
+        <h3><span class="sw" data-draw="sw-ep"></span>이팜</h3>
+        <div class="big" data-draw="ep-rev" data-source="channel_summary" data-field="revenue" data-where="channel=이팜">—</div>
+        <dl class="kv">
+          <dt>매출 비중</dt><dd data-draw="ep-share" data-source="channel_summary" data-field="share" data-where="channel=이팜">—</dd>
+          <dt>판매량</dt><dd data-draw="ep-qty" data-source="channel_summary" data-field="qty" data-where="channel=이팜">—</dd>
+          <dt>공헌이익</dt><dd data-draw="ep-cm" data-source="channel_summary" data-field="contribution" data-where="channel=이팜">—</dd>
+          <dt>공헌이익률</dt><dd data-draw="ep-cmr" data-source="channel_summary" data-field="margin" data-where="channel=이팜">—</dd>
+          <dt>주문 약국</dt><dd data-draw="ep-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=이팜">—</dd>
+          <dt>재발주 약국 비율</dt><dd data-draw="ep-rr" data-source="channel_summary" data-field="reorder_rate" data-where="channel=이팜">—</dd>
+        </dl>
+      </div>
+      <div class="card tile" id="tile-on">
+        <h3><span class="sw" data-draw="sw-on"></span>온누리</h3>
+        <div class="big" data-draw="on-rev" data-source="channel_summary" data-field="revenue" data-where="channel=온누리">—</div>
+        <dl class="kv">
+          <dt>매출 비중</dt><dd data-draw="on-share" data-source="channel_summary" data-field="share" data-where="channel=온누리">—</dd>
+          <dt>판매량</dt><dd data-draw="on-qty" data-source="channel_summary" data-field="qty" data-where="channel=온누리">—</dd>
+          <dt>공헌이익</dt><dd data-draw="on-cm" data-source="channel_summary" data-field="contribution" data-where="channel=온누리">—</dd>
+          <dt>공헌이익률</dt><dd data-draw="on-cmr" data-source="channel_summary" data-field="margin" data-where="channel=온누리">—</dd>
+          <dt>주문 약국</dt><dd data-draw="on-ph" data-source="channel_summary" data-field="pharmacies" data-where="channel=온누리">—</dd>
+          <dt>재발주 약국 비율</dt><dd data-draw="on-rr" data-source="channel_summary" data-field="reorder_rate" data-where="channel=온누리">—</dd>
+        </dl>
+      </div>
     </div>
     <div class="card" style="margin-top:var(--cds-gap-md)" id="trend">
       <h2>매출 추이 <span class="muted" data-draw="trend-unit" data-source="period_info" data-field="unit">—</span></h2>
-      <div class="legend"><span><i class="sw" data-draw="lg1-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg1-kd"></i>KD</span><span><i class="sw" data-draw="lg1-bp"></i>바로팜</span></div>
+      <div class="legend"><span><i class="sw" data-draw="lg1-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg1-kd"></i>KD</span><span><i class="sw" data-draw="lg1-bp"></i>바로팜</span><span><i class="sw" data-draw="lg1-ep"></i>이팜</span><span><i class="sw" data-draw="lg1-on"></i>온누리</span></div>
       <div class="chart" data-draw="trend-chart" data-source="revenue_trend"></div>
     </div>
   </section>
@@ -183,7 +208,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
     <h2>제품별 판매</h2>
     <div class="grid2">
       <div class="card" id="product-rank">
-        <h2>제품별 매출 상위 15</h2>
+        <h2>제품별 매출 상위 15 <span class="muted" data-draw="tag-pr"></span></h2>
         <div class="legend"><span><i class="sw" data-draw="lg2-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg2-kd"></i>KD</span><span><i class="sw" data-draw="lg2-bp"></i>바로팜</span></div>
         <div class="chart" data-draw="product-chart" data-source="product_summary"></div>
       </div>
@@ -197,38 +222,49 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
   </section>
 
   <section id="reorders">
-    <h2>약국별 재발주</h2>
-    <p class="muted">발주 횟수 = 선택한 기간에 주문한 날짜 수 (같은 날 여러 건은 1회). 재발주 = 발주 횟수 − 1</p>
-    <div class="grid2">
-      <div class="card" id="reorder-dist">
-        <h2>발주 횟수별 약국 수</h2>
-        <div class="legend"><span><i class="sw" data-draw="lg4-fm"></i>폐쇄몰</span><span><i class="sw" data-draw="lg4-kd"></i>KD</span><span><i class="sw" data-draw="lg4-bp"></i>바로팜</span></div>
-        <div class="chart" data-draw="dist-chart" data-source="reorder_dist"></div>
-      </div>
-      <div class="card" id="pharmacy-table">
-        <h2>약국 목록</h2>
-        <div class="ctrl"><label for="ph-ch">채널</label>
-          <select id="ph-ch" class="dash-select" aria-label="채널"><option value="">전체</option><option value="폐쇄몰">폐쇄몰</option><option value="KD">KD</option><option value="바로팜">바로팜</option></select>
-          <label for="ph-area">상권</label>
-          <select id="ph-area" class="dash-select" data-draw="ph-area" aria-label="상권" data-source="pharmacy_summary"></select>
-          <label for="ph-re">재발주</label>
-          <select id="ph-re" class="dash-select" aria-label="재발주"><option value="">전체</option><option value="re">재발주 약국(2회 이상)</option><option value="once">1회 발주</option></select>
-          <label for="ph-sort">정렬</label>
-          <select id="ph-sort" class="dash-select" aria-label="정렬"><option value="orders">발주 횟수</option><option value="amount">매출</option><option value="last">최근 발주일</option></select>
+    <h2>제품별 재발주 횟수 <span class="muted" data-draw="tag-re"></span></h2>
+    <p class="muted">재발주 = 같은 약국이 그 제품을 처음 주문한 날 이후 다시 주문한 것(2026년 데이터 기준, 같은 날 여러 건은 1회). 재발주 횟수 = 선택한 기간에 일어난 재발주 주문 수, 발주 중 재발주 = 그 제품 전체 발주 중 재발주가 차지하는 비율. 같은 약국도 채널이 다르면 따로 계산.</p>
+    <div class="stack">
+      <div class="card" id="reorder-table">
+        <div class="ctrl"><label for="re-sort">정렬</label>
+          <select id="re-sort" class="dash-select" aria-label="정렬"><option value="re_orders">재발주 횟수</option><option value="re_amount">재발주 금액</option><option value="re_ratio">발주 중 재발주</option></select>
         </div>
         <div class="tw">
-          <table data-source="pharmacy_summary" data-row-key="channel,pharmacy">
-            <thead><tr><th data-field="pharmacy">약국</th><th data-field="channel">채널</th><th data-field="orders" class="n">발주</th><th data-field="reorders" class="n">재발주</th><th data-field="amount" class="n">매출(원)</th><th data-field="area">상권</th><th data-field="sgg">시·군·구</th><th data-field="last">최근 발주</th></tr></thead>
-            <tbody data-draw="ph-rows"></tbody>
+          <table data-source="product_reorder" data-row-key="product">
+            <thead><tr><th data-field="product">제품</th><th data-field="re_orders" class="n">재발주 횟수</th><th data-field="orders" class="n">전체 발주 횟수</th><th data-field="re_ratio" class="n">발주 중 재발주</th><th data-field="re_qty" class="n">재발주 수량</th><th data-field="re_amount" class="n">재발주 금액(원)</th></tr></thead>
+            <tbody data-draw="re-rows"></tbody>
           </table>
         </div>
-        <div class="more" data-draw="ph-more" data-source="pharmacy_summary"></div>
+        <div class="more" data-draw="re-more" data-source="product_reorder"></div>
       </div>
     </div>
   </section>
 
+  <section id="pharmacies">
+    <h2>약국 목록 <span class="muted" data-draw="tag-ph"></span></h2>
+    <p class="muted">발주 = 선택한 기간에 주문한 날짜 수 (같은 날 여러 건은 1회). 재발주 = 발주 − 1</p>
+    <div class="card" id="pharmacy-table">
+      <div class="ctrl"><label for="ph-ch">채널</label>
+        <select id="ph-ch" class="dash-select" aria-label="채널"><option value="">전체</option><option value="폐쇄몰">폐쇄몰</option><option value="KD">KD</option><option value="바로팜">바로팜</option></select>
+        <label for="ph-area">상권</label>
+        <select id="ph-area" class="dash-select" data-draw="ph-area" aria-label="상권" data-source="pharmacy_summary"></select>
+        <label for="ph-re">재발주</label>
+        <select id="ph-re" class="dash-select" aria-label="재발주"><option value="">전체</option><option value="re">재발주 약국(2회 이상)</option><option value="once">1회 발주</option></select>
+        <label for="ph-sort">정렬</label>
+        <select id="ph-sort" class="dash-select" aria-label="정렬"><option value="orders">발주 횟수</option><option value="amount">매출</option><option value="last">최근 발주일</option></select>
+      </div>
+      <div class="tw">
+        <table data-source="pharmacy_summary" data-row-key="channel,pharmacy">
+          <thead><tr><th data-field="pharmacy">약국</th><th data-field="channel">채널</th><th data-field="orders" class="n">발주</th><th data-field="reorders" class="n">재발주</th><th data-field="amount" class="n">매출(원)</th><th data-field="area">상권</th><th data-field="sgg">시·군·구</th><th data-field="last">최근 발주</th></tr></thead>
+          <tbody data-draw="ph-rows"></tbody>
+        </table>
+      </div>
+      <div class="more" data-draw="ph-more" data-source="pharmacy_summary"></div>
+    </div>
+  </section>
+
   <section id="regions">
-    <h2>지역별 매출 비중</h2>
+    <h2>지역별 매출 비중 <span class="muted" data-draw="tag-rg"></span></h2>
     <div class="grid2">
       <div class="card" id="region-sido">
         <h2>시·도별 매출</h2>
@@ -247,7 +283,8 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
     <summary>데이터 기준과 유의사항</summary>
     <ul>
       <li><b>기간</b>: ‘이번 달’은 데이터가 있는 가장 최근 달, ‘최근 3개월’은 그 달 포함 3개월, ‘2026년 전체’는 2026년 모든 월 파일. 드라이브에서 읽을 수 없는 달은 제외.</li>
-      <li><b>채널 매출·판매량·공헌이익</b>: 각 월 시트 ‘폐쇄몰_매출’, ‘KD_매출’ 탭의 일별 값 그대로 사용.</li>
+      <li><b>월평균</b>: ‘최근 3개월’·‘2026년 전체’의 매출·판매량·공헌이익·발주/재발주 횟수·약국 수는 기간 합계를 포함된 달 수로 나눈 월평균. 주문 약국과 재발주 약국(같은 달 두 번 이상 발주)은 달마다 센 뒤 평균. 비중·이익률·재발주 비율은 평균값끼리 계산해 합계 기준과 같음. 진행 중인 달(가장 최근 달)도 1개월로 포함. 매출 추이·판매량 추이 차트는 월별 값 그대로. 약국 목록 재발주 필터는 기간 전체 발주 횟수 기준.</li>
+      <li><b>채널 매출·판매량·공헌이익(셀인)</b>: 각 월 시트 ‘폐쇄몰_매출’, ‘KD_매출’, ‘바로팜_매출’(4~5월은 ‘바로팜 매출’), ‘이팜_매출’, ‘온누리_매출’ 탭의 일별 매출·판매량(입고수)·공헌이익 그대로 사용. ‘바로팜_매출_셀아웃’, ‘○○_약국 매출’ 탭은 미사용. 탭이 없는 달은 0.</li>
       <li><b>폐쇄몰 제품·약국·지역 매출</b>: ‘폐쇄몰 주문원장’의 상품구매금액(환불·할인 차감 전). 발주일이 빈 행은 주문번호 앞자리 날짜로 보완. 시트 ‘폐쇄몰_매출’ 탭은 등록된 상품만 합산하므로, 새 상품이 있던 달(2·3·8월 등)은 원장 합계가 시트보다 최대 6% 정도 많음. 채널 카드는 시트 값, 제품·약국·지역은 원장 값.</li>
       <li><b>KD 제품·약국·지역 매출은 추정치.</b> KD 주문원장에 금액이 없는 달이 있어 ‘KD_매출’ 탭의 일별 매출을 그날 주문 수량 비율로 배분. 채널 합계는 시트와 동일.</li>
       <li><b>KD 판매량</b>: 채널 카드는 ‘KD_매출’ 탭 판매량, 제품 차트는 주문원장 수량. 11월은 원장 1,280개, 시트 780개로 차이 있음.</li>
@@ -256,8 +293,8 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
       <li><b>체인 약국 지점</b>: 레디영·베리뉴약국처럼 한 계정으로 여러 지점에 보내는 주문은 배송지로 지점 구분, ‘레디영약국(명동타운)’처럼 ‘약국명(지점명)’으로 표시(지점명은 공식 매장명 기준). 도레미약국은 본사(주흥길 9) 일괄 주문이라 지점 구분 없이 ‘도레미약국’. 아직 등록되지 않은 새 배송지는 ‘약국명(상권)’으로 임시 표시. 세 채널 동일 규칙.</li>
       <li><b>지역·상권</b>: 배송 주소로 시·도, 시·군·구 구분, 도로명·동 이름으로 상권(명동, 홍대, 성수, 강남역, 서면, 남포·광복 등) 지정. 상권 규칙에 없는 곳은 시·군·구로 표시.</li>
       <li><b>내부 테스트 계정</b>(김서연, 박채은, 김도윤)의 폐쇄몰 주문은 제품·약국·지역 집계에서 제외. 채널 카드 매출은 시트 값이라 이 주문이 포함됐을 수 있음(3월 224만원, 4월 146만원, 10월 319만원).</li>
-      <li><b>바로팜</b>: 11월 시트 ‘바로팜 주문원장’(입점 후 누적 기록)만 사용, 바로팜 매출 탭은 미사용. 매출은 실주문금액(할인 후), 판매량은 실주문수량, 날짜는 주문일시 기준. 공헌이익 자료 없음. 약국·지역은 원장의 약국명·약국주소 기준.</li>
-      <li>이팜 제외.</li>
+      <li><b>바로팜 제품·약국·지역(셀아웃)</b>: 최근 월 시트 ‘바로팜 주문원장’(입점 후 누적 기록)의 실주문금액(할인 후)·실주문수량, 주문일시 기준. 채널 카드·매출 추이의 바로팜은 ‘바로팜_매출’ 탭(셀인)이라 금액이 다름.</li>
+      <li><b>이팜·온누리</b>: 채널 매출(셀인)만 집계. 주문원장이 없어 제품·약국·지역·재발주에는 없음.</li>
     </ul>
   </details>
 </div>
@@ -272,10 +309,14 @@ window.PD = {
   },
   int: (v) => Math.round(+v || 0).toLocaleString('ko-KR'),
   pct: (v) => ((+v || 0) * 100).toFixed(1) + '%',
-  CH: ['폐쇄몰', 'KD', '바로팜'],
-  KEYS: ['fm', 'kd', 'bp'],
-  key: (ch) => (ch === 'KD' ? 'kd' : ch === '바로팜' ? 'bp' : 'fm'),
-  col: (ch) => dash.colors[ch === 'KD' ? 1 : ch === '바로팜' ? 2 : 0],
+  CH: ['폐쇄몰', 'KD', '바로팜', '이팜', '온누리'],
+  KEYS: ['fm', 'kd', 'bp', 'ep', 'on'],
+  key: (ch) => ({ KD: 'kd', 바로팜: 'bp', 이팜: 'ep', 온누리: 'on' })[ch] || 'fm',
+  col: (ch) => { const i = Math.max(0, PD.CH.indexOf(ch)); return dash.colors[i] || ['#2f6fdb', '#e8833a', '#3aa676', '#b04fc9', '#c9a227'][i]; },
+  sum: (r) => PD.KEYS.reduce((s, k) => s + (+r[k] || 0), 0),
+  // 이번 달은 1, 최근 3개월·2026년 전체는 포함된 달 수 (금액·수량·횟수를 이 값으로 나눠 월평균)
+  avgN: (daily) => { const p = dash.params().period || 'month'; return p === 'month' ? 1 : Math.max(1, PD.months(p, daily).length); },
+  cnt: (v) => { v = +v || 0; return Math.abs(v - Math.round(v)) < 0.05 || Math.abs(v) >= 100 ? PD.int(v) : v.toFixed(1); },
   state: { product: null, phCh: '', phSort: 'orders' },
   // 선택한 기간의 월 목록 ("YYYY-MM"), 데이터의 가장 최근 달 기준
   months: (period, daily) => {
@@ -301,8 +342,11 @@ dash.calc('period_info', {
     const ms = PD.months(period, daily);
     const days = daily.filter((r) => ms.includes(r.month) && (+r.revenue || 0) > 0).map((r) => r.date).sort();
     const f = (s) => (s ? `${+s.slice(5, 7)}월 ${+s.slice(8)}일` : '');
+    const avg = period !== 'month';
     return [{ period, months: ms.join(','), range: days.length ? `${days[0].slice(0, 4)}년 ${f(days[0])} ~ ${f(days[days.length - 1])}` : '데이터 없음',
-      unit: period === 'month' ? '(일별)' : '(월별)' }];
+      unit: period === 'month' ? '(일별)' : '(월별)', n: ms.length,
+      basis: avg ? `금액·수량·횟수는 ${ms.length}개월 월평균` : '',
+      tag: avg ? '· 월평균' : '' }];
   },
 });
 
@@ -310,9 +354,10 @@ const inPeriod = (rows, daily) => { const ms = PD.months(dash.params().period ||
 
 dash.calc('pharmacy_summary', {
   title: '약국별 발주 요약',
-  description: '선택한 기간의 주문 내역에서 약국별 발주 횟수(주문일 수), 재발주, 매출, 주 배송 지역을 계산',
+  description: '선택한 기간의 주문 내역에서 약국별 발주 횟수(주문일 수), 재발주, 매출, 주 배송 지역을 계산. 최근 3개월·2026년 전체는 매출과 발주·재발주 횟수를 달 수로 나눈 월평균(orders_avg, reorders_avg, amount)도 함께',
   inputs: ['order_lines', 'channel_daily'],
   fn: (lines, daily) => {
+    const n = PD.avgN(daily);
     const m = new Map();
     for (const r of inPeriod(lines, daily)) {
       const k = r.channel + '|' + r.pharmacy;
@@ -326,30 +371,39 @@ dash.calc('pharmacy_summary', {
     return [...m.values()].map((o) => {
       const sgg = [...o.regions.entries()].sort((a, b) => b[1] - a[1])[0][0];
       const area = [...o.areas.entries()].sort((a, b) => b[1] - a[1])[0][0];
-      return { channel: o.channel, pharmacy: o.pharmacy, orders: o.dates.size, reorders: o.dates.size - 1, amount: o.amount, sgg, area, sido: sgg.split(' ')[0], last: o.last };
+      return { channel: o.channel, pharmacy: o.pharmacy, orders: o.dates.size, reorders: o.dates.size - 1, orders_avg: o.dates.size / n, reorders_avg: (o.dates.size - 1) / n,
+        amount: o.amount / n, sgg, area, sido: sgg.split(' ')[0], last: o.last };
     }).sort((a, b) => b.amount - a.amount);
   },
 });
 
 dash.calc('channel_summary', {
   title: '채널별 요약',
-  description: '선택한 기간의 채널별 일별 매출(폐쇄몰·KD는 시트, 바로팜은 주문원장 합계)과 약국 발주 요약에서 계산한 매출, 비중, 공헌이익, 재발주 약국 수',
-  inputs: ['channel_daily', 'pharmacy_summary'],
-  fn: (daily, pharmacies) => {
+  description: '선택한 기간의 채널별 일별 매출(셀인, 월별 시트의 채널 매출 탭)과 주문원장에서 계산한 매출, 비중, 공헌이익, 주문 약국·재발주 약국(같은 달 두 번 이상 발주) 수. 최근 3개월·2026년 전체는 달 수로 나눈 월평균, 약국 수는 달마다 센 뒤 평균',
+  inputs: ['channel_daily', 'order_lines'],
+  fn: (daily, lines) => {
     const d0 = inPeriod(daily, daily);
+    const n = PD.avgN(daily);
+    // 달별·채널별 약국 발주일
+    const pm = new Map();
+    for (const r of inPeriod(lines, daily)) {
+      const k = r.month + '|' + r.channel + '|' + r.pharmacy;
+      const o = pm.get(k) || { channel: r.channel, dates: new Set() };
+      o.dates.add(r.date); pm.set(k, o);
+    }
     const agg = (ch) => {
       const d = ch ? d0.filter((r) => r.channel === ch) : d0;
-      const p = ch ? pharmacies.filter((r) => r.channel === ch) : pharmacies;
-      const revenue = d.reduce((s, r) => s + (+r.revenue || 0), 0);
-      const contribution = d.reduce((s, r) => s + (+r.contribution || 0), 0);
+      const p = [...pm.values()].filter((o) => !ch || o.channel === ch);
+      const revenue = d.reduce((s, r) => s + (+r.revenue || 0), 0) / n;
+      const contribution = d.reduce((s, r) => s + (+r.contribution || 0), 0) / n;
       const has_cm = d.some((r) => r.contribution !== '' && r.contribution != null);
-      const qty = d.reduce((s, r) => s + (+r.qty || 0), 0);
-      const re = p.filter((r) => +r.orders >= 2).length;
+      const qty = d.reduce((s, r) => s + (+r.qty || 0), 0) / n;
+      const ph = p.length / n, re = p.filter((o) => o.dates.size >= 2).length / n;
       return { channel: ch || '합계', revenue, qty, contribution, has_cm, margin: revenue ? contribution / revenue : 0,
-        pharmacies: p.length, reorder_pharmacies: re, reorder_rate: p.length ? re / p.length : 0 };
+        pharmacies: ph, reorder_pharmacies: re, reorder_rate: ph ? re / ph : 0 };
     };
-    const rows = [agg('폐쇄몰'), agg('KD'), agg('바로팜'), agg(null)];
-    const tot = rows[3].revenue;
+    const rows = [...PD.CH.map((ch) => agg(ch)), agg(null)];
+    const tot = rows[rows.length - 1].revenue;
     rows.forEach((r) => (r.share = tot ? r.revenue / tot : 0));
     return rows;
   },
@@ -364,7 +418,7 @@ dash.calc('revenue_trend', {
     const key = (r) => (period === 'month' ? r.date : r.month);
     const m = new Map();
     for (const r of inPeriod(daily, daily)) {
-      const o = m.get(key(r)) || { key: key(r), fm: 0, kd: 0, bp: 0 };
+      const o = m.get(key(r)) || { key: key(r), fm: 0, kd: 0, bp: 0, ep: 0, on: 0 };
       o[PD.key(r.channel)] += +r.revenue || 0;
       m.set(key(r), o);
     }
@@ -374,7 +428,7 @@ dash.calc('revenue_trend', {
 
 dash.calc('product_summary', {
   title: '제품별 판매 합계',
-  description: '선택한 기간의 주문 내역을 통일한 제품명 기준으로 채널별 수량과 매출 합산 (KD 매출은 추정 배분값, 바로팜은 실주문금액)',
+  description: '선택한 기간의 주문 내역을 통일한 제품명 기준으로 채널별 수량과 매출 합산, 최근 3개월·2026년 전체는 달 수로 나눈 월평균 (KD 매출은 추정 배분값, 바로팜은 실주문금액)',
   inputs: ['order_lines', 'channel_daily'],
   fn: (lines, daily) => {
     const m = new Map();
@@ -384,24 +438,38 @@ dash.calc('product_summary', {
       o['qty_' + k] += +r.qty || 0; o['amount_' + k] += +r.amount || 0;
       m.set(r.product, o);
     }
-    return [...m.values()].map((o) => ({ ...o, qty: o.qty_fm + o.qty_kd + o.qty_bp, amount: o.amount_fm + o.amount_kd + o.amount_bp }))
-      .sort((a, b) => b.amount - a.amount);
+    const n = PD.avgN(daily);
+    return [...m.values()].map((o) => {
+      for (const k of ['qty_fm', 'qty_kd', 'qty_bp', 'amount_fm', 'amount_kd', 'amount_bp']) o[k] /= n;
+      return { ...o, qty: o.qty_fm + o.qty_kd + o.qty_bp, amount: o.amount_fm + o.amount_kd + o.amount_bp };
+    }).sort((a, b) => b.amount - a.amount);
   },
 });
 
-dash.calc('reorder_dist', {
-  title: '발주 횟수별 약국 수',
-  description: '선택한 기간의 약국별 발주 횟수를 구간으로 나눠 채널별로 센 값',
-  inputs: ['pharmacy_summary'],
-  fn: (pharmacies) => {
-    const buckets = ['1회', '2회', '3~4회', '5~9회', '10회 이상'];
-    const b = (n) => (n <= 1 ? '1회' : n === 2 ? '2회' : n <= 4 ? '3~4회' : n <= 9 ? '5~9회' : '10회 이상');
-    const rows = buckets.map((k) => ({ bucket: k, fm: 0, kd: 0, bp: 0 }));
-    for (const r of pharmacies) {
-      const row = rows.find((x) => x.bucket === b(+r.orders));
-      row[PD.key(r.channel)]++;
+dash.calc('product_reorder', {
+  title: '제품별 재발주',
+  description: '약국별로 제품을 처음 주문한 날(2026년 전체 데이터 기준) 이후의 주문을 재발주로 보고, 선택한 기간의 제품별 재발주 횟수(약국·주문일 기준), 전체 발주 횟수, 발주 중 재발주 비율, 재발주 수량, 채널별 재발주 금액을 계산. 최근 3개월·2026년 전체는 횟수·수량·금액을 달 수로 나눈 월평균',
+  inputs: ['order_lines', 'channel_daily'],
+  fn: (lines, daily) => {
+    const first = new Map();
+    for (const r of lines) {
+      const k = r.channel + '|' + r.pharmacy + '|' + r.product;
+      if (!first.has(k) || r.date < first.get(k)) first.set(k, r.date);
     }
-    return rows;
+    const m = new Map();
+    for (const r of inPeriod(lines, daily)) {
+      const ph = r.channel + '|' + r.pharmacy;
+      const o = m.get(r.product) || { product: r.product, line: r.line, ev: new Set(), re: new Set(), amount: 0, re_qty: 0, re_fm: 0, re_kd: 0, re_bp: 0 };
+      o.ev.add(ph + '|' + r.date); o.amount += +r.amount || 0;
+      if (r.date > first.get(ph + '|' + r.product)) { o.re.add(ph + '|' + r.date); o.re_qty += +r.qty || 0; o['re_' + PD.key(r.channel)] += +r.amount || 0; }
+      m.set(r.product, o);
+    }
+    const n = PD.avgN(daily);
+    return [...m.values()].map((o) => {
+      const re_amount = (o.re_fm + o.re_kd + o.re_bp) / n;
+      return { product: o.product, line: o.line, orders: o.ev.size / n, re_orders: o.re.size / n, re_ratio: o.ev.size ? o.re.size / o.ev.size : 0, re_qty: o.re_qty / n,
+        amount: o.amount / n, re_amount, re_fm: o.re_fm / n, re_kd: o.re_kd / n, re_bp: o.re_bp / n };
+    }).sort((a, b) => b.re_amount - a.re_amount || b.re_orders - a.re_orders);
   },
 });
 
@@ -415,18 +483,20 @@ const regionCalc = (key, lines, daily) => {
     tot += +r.amount || 0;
     m.set(k, o);
   }
-  return [...m.values()].map((o) => { const amount = o.amount_fm + o.amount_kd + o.amount_bp; return { ...o, amount, share: tot ? amount / tot : 0 }; })
+  const n = PD.avgN(daily);
+  return [...m.values()].map((o) => { const amount = o.amount_fm + o.amount_kd + o.amount_bp;
+    return { ...o, amount_fm: o.amount_fm / n, amount_kd: o.amount_kd / n, amount_bp: o.amount_bp / n, amount: amount / n, share: tot ? amount / tot : 0 }; })
     .sort((a, b) => b.amount - a.amount);
 };
 dash.calc('region_summary', {
   title: '시·도별 매출',
-  description: '선택한 기간, 배송 주소의 시·도 기준 채널별 매출과 비중 (KD 매출은 추정 배분값)',
+  description: '선택한 기간, 배송 주소의 시·도 기준 채널별 매출(최근 3개월·2026년 전체는 월평균)과 비중 (KD 매출은 추정 배분값)',
   inputs: ['order_lines', 'channel_daily'],
   fn: (lines, daily) => regionCalc('sido', lines, daily),
 });
 dash.calc('sgg_summary', {
   title: '상권별 매출',
-  description: '선택한 기간, 배송 주소로 나눈 상권(명동·홍대·성수 등) 기준 채널별 매출과 비중 (KD 매출은 추정 배분값)',
+  description: '선택한 기간, 배송 주소로 나눈 상권(명동·홍대·성수 등) 기준 채널별 매출(최근 3개월·2026년 전체는 월평균)과 비중 (KD 매출은 추정 배분값)',
   inputs: ['order_lines', 'channel_daily'],
   fn: (lines, daily) => regionCalc('area', lines, daily),
 });
@@ -448,20 +518,26 @@ dash.onData(() => {
   txt('t-share', '폐쇄몰', (r) => PD.pct(r.share));
   txt('t-ph', '합계', (r) => PD.int(r.pharmacies));
   txt('t-re', '합계', (r) => PD.int(r.reorder_pharmacies));
-  for (const [p, ch] of [['fm', '폐쇄몰'], ['kd', 'KD'], ['bp', '바로팜']]) {
+  for (const [p, ch] of PD.CH.map((ch, i) => [PD.KEYS[i], ch])) {
     txt(p + '-rev', ch, (r) => PD.won(r.revenue));
     txt(p + '-share', ch, (r) => PD.pct(r.share));
     txt(p + '-qty', ch, (r) => PD.int(r.qty) + '개');
     txt(p + '-cm', ch, (r) => (r.has_cm ? PD.won(r.contribution) : '자료 없음'));
     txt(p + '-cmr', ch, (r) => (r.has_cm ? PD.pct(r.margin) : '—'));
-    txt(p + '-ph', ch, (r) => PD.int(r.pharmacies) + '곳');
-    txt(p + '-rr', ch, (r) => PD.pct(r.reorder_rate));
+    txt(p + '-ph', ch, (r) => (r.pharmacies ? PD.int(r.pharmacies) + '곳' : '—'));
+    txt(p + '-rr', ch, (r) => (r.pharmacies ? PD.pct(r.reorder_rate) : '—'));
   }
   const info = (field) => (el) => { const d = dash.data('period_info'); el.textContent = d.status === 'ok' && d.data && d.data[0] ? d.data[0][field] : '—'; };
   dash.draw('range', info('range'));
+  dash.draw('basis', info('basis'));
+  for (const t of ['tag-ch', 'tag-pr', 'tag-re', 'tag-ph', 'tag-rg']) dash.draw(t, info('tag'));
+  const avg = () => { const d = dash.data('period_info'); return !!(d.status === 'ok' && d.data && d.data[0] && d.data[0].period !== 'month'); };
+  dash.draw('lead-pre', (el) => { el.textContent = avg() ? '월평균' : '이 기간'; });
+  dash.draw('lead-pre2', (el) => { el.textContent = avg() ? '월평균 주문 약국' : '주문한 약국'; });
+  dash.draw('lead-re', (el) => { el.textContent = avg() ? '같은 달 두 번 이상 발주' : '두 번 이상 발주'; });
   dash.draw('trend-unit', info('unit'));
   const sw = (ch) => (el) => { el.style.background = PD.col(ch); };
-  for (const n of ['sw', 'lg1', 'lg2', 'lg3', 'lg4', 'lg5', 'lg6']) { dash.draw(n + '-fm', sw('폐쇄몰')); dash.draw(n + '-kd', sw('KD')); dash.draw(n + '-bp', sw('바로팜')); }
+  for (const n of ['sw', 'lg1', 'lg2', 'lg3', 'lg4', 'lg5', 'lg6']) PD.CH.forEach((ch, i) => dash.draw(n + '-' + PD.KEYS[i], sw(ch)));
 })();
 </script>
 
@@ -497,7 +573,8 @@ window.PDC = {
     return true;
   },
   hbar(el, rows, fmt, extra, labelFn) {
-    const tot = (r) => (r.fm || 0) + (r.kd || 0) + (r.bp || 0);
+    const tot = PD.sum;
+    const chs = PD.CH.map((ch, i) => [ch, PD.KEYS[i], i]).filter(([, k]) => rows.some((r) => +r[k]));
     const lab = (r) => (labelFn ? labelFn(r) : fmt(tot(r)));
     el.replaceChildren();
     const W = el.clientWidth || 360, bh = 22, gap = 6;
@@ -519,13 +596,13 @@ window.PDC = {
         let s = this.textContent;
         while (this.getComputedTextLength() > lw - 7 && s.length > 4) { s = s.slice(0, -1); this.textContent = s + '…'; }
       });
-    PD.CH.forEach((ch, i) => {
-      const k = PD.KEYS[i], before = (r) => PD.KEYS.slice(0, i).reduce((s, kk) => s + (r[kk] || 0), 0);
-      g.append('rect').attr('x', (r) => lw + x(before(r))).attr('height', bh).attr('width', (r) => x(r[k] || 0)).style('fill', PD.col(ch));
+    chs.forEach(([ch, k, i]) => {
+      const before = (r) => PD.KEYS.slice(0, i).reduce((s, kk) => s + (+r[kk] || 0), 0);
+      g.append('rect').attr('x', (r) => lw + x(before(r))).attr('height', bh).attr('width', (r) => x(+r[k] || 0)).style('fill', PD.col(ch));
     });
     g.append('text').attr('x', (r) => lw + x(tot(r)) + 6).attr('y', bh / 2).attr('dy', '0.35em').text(lab);
     g.append('rect').attr('width', W).attr('height', bh).style('fill', 'transparent')
-      .on('mousemove', (ev, r) => tip.show(ev, [r.label, ...PD.CH.map((ch, i) => `${ch} ${fmt(r[PD.KEYS[i]] || 0)}`), ...(extra ? extra(r) : [])]))
+      .on('mousemove', (ev, r) => tip.show(ev, [r.label, ...chs.map(([ch, k]) => `${ch} ${fmt(+r[k] || 0)}`), ...(extra ? extra(r) : [])]))
       .on('mouseleave', () => tip.hide());
     return svg;
   },
@@ -534,7 +611,8 @@ window.PDC = {
     el.replaceChildren();
     const W = el.clientWidth || 600, H = 240, m = { t: 10, r: 10, b: 24, l: 10 };
     const svg = d3.select(el).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', aria);
-    const tot = (r) => (r.fm || 0) + (r.kd || 0) + (r.bp || 0);
+    const tot = PD.sum;
+    const chs = PD.CH.map((ch, i) => [ch, PD.KEYS[i], i]).filter(([, k]) => rows.some((r) => +r[k]));
     const y = d3.scaleLinear().domain([0, d3.max(rows, tot) || 1]).nice().range([H - m.b, m.t]);
     const ya = svg.append('g').call(d3.axisLeft(y).ticks(4).tickFormat(fmtY));
     let lw = 0; ya.selectAll('text').each(function () { lw = Math.max(lw, this.getComputedTextLength()); });
@@ -546,13 +624,13 @@ window.PDC = {
       .call(d3.axisBottom(x).tickValues(rows.map((r) => r.key).filter((_, i) => i % step === 0)).tickFormat(label).tickSize(0)).select('.domain').remove();
     const tip = PDC.tip(el);
     const g = svg.selectAll('g.b').data(rows).join('g').attr('class', 'b');
-    PD.CH.forEach((ch, i) => {
-      const k = PD.KEYS[i], below = (r) => PD.KEYS.slice(0, i).reduce((s, kk) => s + (r[kk] || 0), 0);
-      g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', (r) => y(below(r) + (r[k] || 0)))
-        .attr('height', (r) => y(below(r)) - y(below(r) + (r[k] || 0))).style('fill', PD.col(ch));
+    chs.forEach(([ch, k, i]) => {
+      const below = (r) => PD.KEYS.slice(0, i).reduce((s, kk) => s + (+r[kk] || 0), 0);
+      g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', (r) => y(below(r) + (+r[k] || 0)))
+        .attr('height', (r) => y(below(r)) - y(below(r) + (+r[k] || 0))).style('fill', PD.col(ch));
     });
     g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
-      .on('mousemove', (ev, r) => tip.show(ev, [label(r.key), ...PD.CH.map((ch, i) => `${ch} ${fmtV(r[PD.KEYS[i]] || 0)}`), `합계 ${fmtV(tot(r))}`]))
+      .on('mousemove', (ev, r) => tip.show(ev, [label(r.key), ...chs.map(([ch, k]) => `${ch} ${fmtV(+r[k] || 0)}`), `합계 ${fmtV(tot(r))}`]))
       .on('mouseleave', () => tip.hide());
   },
   keyLabel: (k) => (k.length > 7 ? `${+k.slice(5, 7)}/${+k.slice(8)}` : `${+k.slice(5, 7)}월`),
@@ -608,10 +686,31 @@ dash.draw('ptrend-chart', (el) => {
   PDC.vbar(el, rows, PDC.keyLabel, d3.format(',d'), (v) => PD.int(v) + '개', `${prod || ''} 판매량 추이`);
 });
 
-dash.draw('dist-chart', (el) => {
-  const d = dash.data('reorder_dist');
-  if (!PDC.status(el, d)) return;
-  PDC.hbar(el, d.data.map((r) => ({ label: r.bucket, fm: r.fm, kd: r.kd, bp: r.bp })), (v) => PD.int(v) + '곳').attr('aria-label', '발주 횟수 구간별 약국 수');
+PD.reShow = (n) => { PD.state.reLimit = n; dash.draw('re-rows'); dash.draw('re-more'); };
+document.querySelectorAll('#re-sort').forEach((s) => s.addEventListener('change', () => { PD.state.reSort = s.value; PD.reShow(10); }));
+dash.draw('re-rows', (tb) => {
+  const d = dash.data('product_reorder');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const k = PD.state.reSort || 're_orders';
+  const sorted = d.data.slice().sort((a, b) => (+b[k] - +a[k]) || (+b.re_amount - +a.re_amount));
+  for (const r of sorted.slice(0, PD.state.reLimit || 10)) {
+    const tr = document.createElement('tr');
+    tr.dataset.key = encodeURIComponent(r.product);
+    const cells = [[r.product], [PD.cnt(r.re_orders), 'n'], [PD.cnt(r.orders), 'n'], [PD.pct(r.re_ratio), 'n'], [PD.int(r.re_qty), 'n'], [PD.int(r.re_amount), 'n']];
+    for (const [v, c] of cells) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.appendChild(td); }
+    tb.appendChild(tr);
+  }
+});
+dash.draw('re-more', (el) => {
+  const d = dash.data('product_reorder');
+  el.replaceChildren();
+  if (d.status !== 'ok' || !d.data || !d.data.length) return;
+  const total = d.data.length, lim = Math.min(PD.state.reLimit || 10, total);
+  const s = document.createElement('span'); s.textContent = `${PD.int(total)}개 제품 중 ${PD.int(lim)}개 표시`; el.appendChild(s);
+  const btn = (label, n) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = () => PD.reShow(n); el.appendChild(b); };
+  if (lim < total) { btn('10개 더 보기', lim + 10); btn('전체 보기', total); }
+  if (lim > 10) btn('접기', 10);
 });
 
 // 약국 목록: 필터·정렬한 행 (표와 더보기가 같이 씀). 처음엔 10곳만 표시
@@ -629,7 +728,7 @@ dash.draw('ph-rows', (tb) => {
   for (const r of rows) {
     const tr = document.createElement('tr');
     tr.dataset.key = encodeURIComponent(r.channel) + ',' + encodeURIComponent(r.pharmacy);
-    const cells = [[r.pharmacy], [r.channel], [PD.int(r.orders), 'n'], [PD.int(r.reorders), 'n'], [PD.int(r.amount), 'n'], [r.area], [r.sgg], [r.last]];
+    const cells = [[r.pharmacy], [r.channel], [PD.cnt(r.orders_avg), 'n'], [PD.cnt(r.reorders_avg), 'n'], [PD.int(r.amount), 'n'], [r.area], [r.sgg], [r.last]];
     for (const [v, c] of cells) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.appendChild(td); }
     tb.appendChild(tr);
   }
