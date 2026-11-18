@@ -114,6 +114,12 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd details summary{cursor:pointer;color:var(--color-fg)}
 .pd details li{margin-bottom:4px}
 .pd .more{display:flex;gap:var(--cds-gap-sm);align-items:center;flex-wrap:wrap;margin-top:var(--cds-gap-sm);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.pd .q{font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--color-border-line);border-radius:8px;background:var(--color-panel);color:var(--color-fg);width:180px;max-width:100%}
+.pd .dirb{font:inherit;font-size:13px;border:1px solid var(--color-border-line);background:var(--color-panel);color:var(--color-fg);border-radius:8px;padding:5px 10px;cursor:pointer}
+.pd th[data-field]{cursor:pointer;user-select:none}
+.pd th[data-field]:hover{color:var(--color-fg)}
+.pd th[aria-sort="ascending"]::after{content:" ▲";font-size:10px}
+.pd th[aria-sort="descending"]::after{content:" ▼";font-size:10px}
 .pd .more button{font:inherit;border:1px solid var(--color-border-line);background:var(--color-panel);color:var(--color-fg);border-radius:var(--cds-radius);padding:4px 12px;cursor:pointer}
 </style>
 
@@ -223,11 +229,11 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 
   <section id="reorders">
     <h2>제품별 재발주 횟수 <span class="muted" data-draw="tag-re"></span></h2>
-    <p class="muted">재발주 = 같은 약국이 그 제품을 처음 주문한 날 이후 다시 주문한 것(2026년 데이터 기준, 같은 날 여러 건은 1회). 재발주 횟수 = 선택한 기간에 일어난 재발주 주문 수, 발주 중 재발주 = 그 제품 전체 발주 중 재발주가 차지하는 비율. 같은 약국도 채널이 다르면 따로 계산.</p>
+    <p class="muted">재발주 = 같은 약국이 그 제품을 처음 주문한 날 이후 다시 주문한 것(2026년 데이터 기준, 같은 날 여러 건은 1회). 재발주 횟수 = 선택한 기간에 일어난 재발주 주문 수, 발주 중 재발주 = 그 제품 전체 발주 중 재발주가 차지하는 비율. 같은 약국도 채널이 다르면 따로 계산. 열 제목을 누르면 정렬(한 번 더 누르면 반대 순서).</p>
     <div class="stack">
       <div class="card" id="reorder-table">
         <div class="ctrl"><label for="re-sort">정렬</label>
-          <select id="re-sort" class="dash-select" aria-label="정렬"><option value="re_orders">재발주 횟수</option><option value="re_amount">재발주 금액</option><option value="re_ratio">발주 중 재발주</option></select>
+          <select id="re-sort" class="dash-select" aria-label="정렬"><option value="re_orders">재발주 횟수</option><option value="orders">전체 발주 횟수</option><option value="re_ratio">발주 중 재발주</option><option value="re_qty">재발주 수량</option><option value="re_amount">재발주 금액</option><option value="product">제품명</option></select><button type="button" class="dirb" id="re-dir" aria-label="정렬 방향">↓ 내림차순</button><label for="re-q">검색</label><input type="search" id="re-q" class="q" placeholder="제품명" aria-label="제품명 검색" autocomplete="off">
         </div>
         <div class="tw">
           <table data-source="product_reorder" data-row-key="product">
@@ -242,7 +248,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 
   <section id="pharmacies">
     <h2>약국 목록 <span class="muted" data-draw="tag-ph"></span></h2>
-    <p class="muted">발주 = 선택한 기간에 주문한 날짜 수 (같은 날 여러 건은 1회). 재발주 = 발주 − 1</p>
+    <p class="muted">발주 = 선택한 기간에 주문한 날짜 수 (같은 날 여러 건은 1회). 재발주 = 발주 − 1. 열 제목을 누르면 정렬(한 번 더 누르면 반대 순서).</p>
     <div class="card" id="pharmacy-table">
       <div class="ctrl"><label for="ph-ch">채널</label>
         <select id="ph-ch" class="dash-select" aria-label="채널"><option value="">전체</option><option value="폐쇄몰">폐쇄몰</option><option value="KD">KD</option><option value="바로팜">바로팜</option></select>
@@ -251,7 +257,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         <label for="ph-re">재발주</label>
         <select id="ph-re" class="dash-select" aria-label="재발주"><option value="">전체</option><option value="re">재발주 약국(2회 이상)</option><option value="once">1회 발주</option></select>
         <label for="ph-sort">정렬</label>
-        <select id="ph-sort" class="dash-select" aria-label="정렬"><option value="orders">발주 횟수</option><option value="amount">매출</option><option value="last">최근 발주일</option></select>
+        <select id="ph-sort" class="dash-select" aria-label="정렬"><option value="orders">발주 횟수</option><option value="reorders">재발주</option><option value="amount">매출</option><option value="last">최근 발주일</option><option value="pharmacy">약국명</option><option value="channel">채널</option><option value="area">상권</option><option value="sgg">시·군·구</option></select><button type="button" class="dirb" id="ph-dir" aria-label="정렬 방향">↓ 내림차순</button><label for="ph-q">검색</label><input type="search" id="ph-q" class="q" placeholder="약국명·상권·지역" aria-label="약국 검색" autocomplete="off">
       </div>
       <div class="tw">
         <table data-source="pharmacy_summary" data-row-key="channel,pharmacy">
@@ -317,6 +323,24 @@ window.PD = {
   // 이번 달은 1, 최근 3개월·2026년 전체는 포함된 달 수 (금액·수량·횟수를 이 값으로 나눠 월평균)
   avgN: (daily) => { const p = dash.params().period || 'month'; return p === 'month' ? 1 : Math.max(1, PD.months(p, daily).length); },
   cnt: (v) => { v = +v || 0; return Math.abs(v - Math.round(v)) < 0.05 || Math.abs(v) >= 100 ? PD.int(v) : v.toFixed(1); },
+  // 표 정렬·검색: 글자 열은 가나다순, 숫자 열은 크기순
+  STR: new Set(['product', 'pharmacy', 'channel', 'area', 'sgg', 'last', 'line']),
+  cmp: (k, dir) => (a, b) => (dir === 'asc' ? 1 : -1) * (PD.STR.has(k) ? String(a[k] || '').localeCompare(String(b[k] || ''), 'ko') : (+a[k] || 0) - (+b[k] || 0)),
+  norm: (s) => String(s || '').replace(/\s+/g, '').toLowerCase(),
+  defDir: (k) => (PD.STR.has(k) && k !== 'last' ? 'asc' : 'desc'),
+  // 열 제목 화살표·정렬 선택·방향 버튼을 현재 상태로 (그리기 안에서만 호출)
+  mark: (table, sel, btn, k, dir) => {
+    document.querySelectorAll(table + ' thead th[data-field]').forEach((th) => { if (th.dataset.field === k) th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort'); });
+    const s = document.getElementById(sel); if (s && s.value !== k) s.value = k;
+    const b = document.getElementById(btn); if (b) b.textContent = dir === 'asc' ? '↑ 오름차순' : '↓ 내림차순';
+  },
+  // 열 제목 클릭: 같은 열이면 방향 반대로, 다른 열이면 그 열 기본 방향
+  thSort: (table, kS, kD, show) => document.querySelectorAll(table + ' thead th[data-field]').forEach((th) => th.addEventListener('click', () => {
+    const f = th.dataset.field;
+    if (PD.state[kS] === f) PD.state[kD] = PD.state[kD] === 'asc' ? 'desc' : 'asc';
+    else { PD.state[kS] = f; PD.state[kD] = PD.defDir(f); }
+    show(10);
+  })),
   state: { product: null, phCh: '', phSort: 'orders' },
   // 선택한 기간의 월 목록 ("YYYY-MM"), 데이터의 가장 최근 달 기준
   months: (period, daily) => {
@@ -690,13 +714,20 @@ dash.draw('ptrend-chart', (el) => {
 });
 
 PD.reShow = (n) => { PD.state.reLimit = n; dash.draw('re-rows'); dash.draw('re-more'); };
-document.querySelectorAll('#re-sort').forEach((s) => s.addEventListener('change', () => { PD.state.reSort = s.value; PD.reShow(10); }));
+document.querySelectorAll('#re-sort').forEach((s) => s.addEventListener('change', () => { PD.state.reSort = s.value; PD.state.reDir = PD.defDir(s.value); PD.reShow(10); }));
+document.querySelectorAll('#re-dir').forEach((b) => b.addEventListener('click', () => { PD.state.reDir = (PD.state.reDir || 'desc') === 'asc' ? 'desc' : 'asc'; PD.reShow(10); }));
+document.querySelectorAll('#re-q').forEach((i) => i.addEventListener('input', () => { PD.state.reQ = i.value; PD.reShow(10); }));
+PD.thSort('#reorder-table', 'reSort', 'reDir', PD.reShow);
+PD.reRows = (data) => {
+  const k = PD.state.reSort || 're_orders', dir = PD.state.reDir || 'desc', q = PD.norm(PD.state.reQ);
+  return data.filter((r) => !q || PD.norm(r.product).includes(q)).sort((a, b) => PD.cmp(k, dir)(a, b) || (+b.re_amount - +a.re_amount));
+};
 dash.draw('re-rows', (tb) => {
   const d = dash.data('product_reorder');
   tb.replaceChildren();
   if (d.status !== 'ok' || !d.data) return;
-  const k = PD.state.reSort || 're_orders';
-  const sorted = d.data.slice().sort((a, b) => (+b[k] - +a[k]) || (+b.re_amount - +a.re_amount));
+  PD.mark('#reorder-table', 're-sort', 're-dir', PD.state.reSort || 're_orders', PD.state.reDir || 'desc');
+  const sorted = PD.reRows(d.data);
   for (const r of sorted.slice(0, PD.state.reLimit || 10)) {
     const tr = document.createElement('tr');
     tr.dataset.key = encodeURIComponent(r.product);
@@ -709,8 +740,8 @@ dash.draw('re-more', (el) => {
   const d = dash.data('product_reorder');
   el.replaceChildren();
   if (d.status !== 'ok' || !d.data || !d.data.length) return;
-  const total = d.data.length, lim = Math.min(PD.state.reLimit || 10, total);
-  const s = document.createElement('span'); s.textContent = `${PD.int(total)}개 제품 중 ${PD.int(lim)}개 표시`; el.appendChild(s);
+  const total = PD.reRows(d.data).length, lim = Math.min(PD.state.reLimit || 10, total);
+  const s = document.createElement('span'); s.textContent = total ? `${PD.int(total)}개 제품 중 ${PD.int(lim)}개 표시` : '검색 결과 없음'; el.appendChild(s);
   const btn = (label, n) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = () => PD.reShow(n); el.appendChild(b); };
   if (lim < total) { btn('10개 더 보기', lim + 10); btn('전체 보기', total); }
   if (lim > 10) btn('접기', 10);
@@ -718,15 +749,16 @@ dash.draw('re-more', (el) => {
 
 // 약국 목록: 필터·정렬한 행 (표와 더보기가 같이 씀). 처음엔 10곳만 표시
 PD.phRows = (data) => {
-  const { phCh, phSort } = PD.state;
-  return data.filter((r) => (!phCh || r.channel === phCh) && (!PD.state.phArea || r.area === PD.state.phArea) && (!PD.state.phRe || (PD.state.phRe === 're' ? +r.orders >= 2 : +r.orders < 2))).slice().sort((a, b) =>
-    phSort === 'last' ? b.last.localeCompare(a.last) : (+b[phSort] - +a[phSort]) || (+b.amount - +a.amount));
+  const { phCh, phSort } = PD.state, dir = PD.state.phDir || 'desc', q = PD.norm(PD.state.phQ);
+  return data.filter((r) => (!phCh || r.channel === phCh) && (!PD.state.phArea || r.area === PD.state.phArea) && (!PD.state.phRe || (PD.state.phRe === 're' ? +r.orders >= 2 : +r.orders < 2))
+    && (!q || PD.norm(r.pharmacy + ' ' + r.area + ' ' + r.sgg).includes(q))).sort((a, b) => PD.cmp(phSort || 'orders', dir)(a, b) || (+b.amount - +a.amount));
 };
 PD.phShow = (n) => { PD.state.phLimit = n; dash.draw('ph-rows'); dash.draw('ph-more'); };
 dash.draw('ph-rows', (tb) => {
   const d = dash.data('pharmacy_summary');
   tb.replaceChildren();
   if (d.status !== 'ok' || !d.data) return;
+  PD.mark('#pharmacy-table', 'ph-sort', 'ph-dir', PD.state.phSort || 'orders', PD.state.phDir || 'desc');
   const rows = PD.phRows(d.data).slice(0, PD.state.phLimit || 10);
   for (const r of rows) {
     const tr = document.createElement('tr');
@@ -741,7 +773,7 @@ dash.draw('ph-more', (el) => {
   el.replaceChildren();
   if (d.status !== 'ok' || !d.data) return;
   const total = PD.phRows(d.data).length, lim = Math.min(PD.state.phLimit || 10, total);
-  if (!total) return;
+  if (!total) { const s = document.createElement('span'); s.textContent = '검색 결과 없음'; el.appendChild(s); return; }
   const s = document.createElement('span'); s.textContent = `${PD.int(total)}곳 중 ${PD.int(lim)}곳 표시`; el.appendChild(s);
   const btn = (label, n) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = () => PD.phShow(n); el.appendChild(b); };
   if (lim < total) { btn('10곳 더 보기', lim + 10); btn('전체 보기', total); }
@@ -756,7 +788,10 @@ dash.draw('ph-area', (sel) => {
   sel.onchange = () => { PD.state.phArea = sel.value; PD.phShow(10); };
 });
 document.querySelectorAll('#ph-ch').forEach((s) => s.addEventListener('change', () => { PD.state.phCh = s.value; PD.phShow(10); }));
-document.querySelectorAll('#ph-sort').forEach((s) => s.addEventListener('change', () => { PD.state.phSort = s.value; PD.phShow(10); }));
+document.querySelectorAll('#ph-sort').forEach((s) => s.addEventListener('change', () => { PD.state.phSort = s.value; PD.state.phDir = PD.defDir(s.value); PD.phShow(10); }));
+document.querySelectorAll('#ph-dir').forEach((b) => b.addEventListener('click', () => { PD.state.phDir = (PD.state.phDir || 'desc') === 'asc' ? 'desc' : 'asc'; PD.phShow(10); }));
+document.querySelectorAll('#ph-q').forEach((i) => i.addEventListener('input', () => { PD.state.phQ = i.value; PD.phShow(10); }));
+PD.thSort('#pharmacy-table', 'phSort', 'phDir', PD.phShow);
 document.querySelectorAll('#ph-re').forEach((s) => s.addEventListener('change', () => { PD.state.phRe = s.value; PD.phShow(10); }));
 
 const regionDraw = (id, src, n, label) => dash.draw(id, (el) => {
