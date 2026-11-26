@@ -120,6 +120,13 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd th[data-field]:hover{color:var(--color-fg)}
 .pd th[aria-sort="ascending"]::after{content:" ▲";font-size:10px}
 .pd th[aria-sort="descending"]::after{content:" ▼";font-size:10px}
+.pd .donut{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--cds-gap-lg)}
+.pd .donut svg{flex:0 0 auto}
+.pd .donut ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:auto auto auto;gap:6px var(--cds-gap-md);font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums;align-items:center}
+.pd .donut li{display:contents}
+.pd .donut .nm{display:inline-flex;align-items:center;gap:6px;color:var(--color-fg)}
+.pd .donut .pc{text-align:right;font-weight:var(--cds-font-weight-medium)}
+.pd .donut .am{text-align:right;color:var(--color-fg-muted)}
 .pd .more button{font:inherit;border:1px solid var(--color-border-line);background:var(--color-panel);color:var(--color-fg);border-radius:var(--cds-radius);padding:4px 12px;cursor:pointer}
 </style>
 
@@ -222,7 +229,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         <div class="card" id="line-table">
           <h2>라인 판매 비중 <span class="muted" data-draw="tag-ln2"></span></h2>
           <p class="muted">선택한 기간 전체 매출을 100%로 놓고 라인이 차지하는 비율입니다.</p>
-          <div class="chart" data-draw="ln-ch-chart" data-source="line_summary"></div>
+          <div class="chart" data-draw="ln-ch-chart" data-source="line_summary" style="min-height:220px"></div>
         </div>
       </div>
     </div>
@@ -739,47 +746,44 @@ dash.draw('ln-ch-chart', (el) => {
   const d = dash.data('line_summary');
   if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
   const grp = (l) => (PD.LMAIN.includes(l) ? l : '그 외');
-  const cols = [['전체', 'share', 'amount']];
-  const rows = cols.map(([label, sk, ak]) => {
-    const o = { label, segs: new Map(), others: [] };
-    for (const r of d.data) {
-      const g = grp(r.line), v = +r[sk] || 0;
-      const seg = o.segs.get(g) || { line: g, share: 0, amount: 0 };
-      seg.share += v; seg.amount += +r[ak] || 0; o.segs.set(g, seg);
-      if (g === '그 외' && v > 0) o.others.push(`${r.line} ${PD.pct(v)}`);
-    }
-    o.total = [...o.segs.values()].reduce((a, x) => a + x.amount, 0);
-    return o;
-  }).filter((o) => o.total > 0);
-  const series = [...PD.LMAIN, '그 외'].filter((s) => rows.some((o) => (o.segs.get(s) || {}).share > 0));
+  const segs = new Map(), others = [];
+  for (const r of d.data) {
+    const g = grp(r.line), v = +r.share || 0;
+    const o = segs.get(g) || { line: g, share: 0, amount: 0 };
+    o.share += v; o.amount += +r.amount || 0; segs.set(g, o);
+    if (g === '그 외' && v > 0) others.push(`${r.line} ${PD.pct(v)}`);
+  }
+  const data = [...PD.LMAIN, '그 외'].map((s) => segs.get(s)).filter((o) => o && o.share > 0);
+  const col = (s) => (s === '그 외' ? PD.lcol(7) : PD.lineCol(s));
+  const total = data.reduce((a, o) => a + o.amount, 0);
   el.replaceChildren();
-  const lg = document.createElement('div'); lg.className = 'legend';
-  series.forEach((s) => { const sp = document.createElement('span'); const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = s === '그 외' ? PD.lcol(7) : PD.lineCol(s); const v = rows.length === 1 ? (rows[0].segs.get(s) || {}).share || 0 : null; sp.append(sw, v == null ? s : `${s} ${PD.pct(v)}`); lg.appendChild(sp); });
-  el.appendChild(lg);
-  const W = el.clientWidth || 360, bh = 56, gap = 0;
-  const svg = d3.select(el).append('svg').attr('width', '100%').attr('role', 'img').attr('aria-label', '전체 매출 대비 라인별 판매 비중 100% 누적 가로 막대');
-  const meas = svg.append('g'); let lw = 0;
-  rows.forEach((o) => { lw = Math.max(lw, meas.append('text').text(o.label).node().getComputedTextLength()); });
-  meas.remove(); lw = rows.length > 1 ? lw + 10 : 0;
-  const H = rows.length * (bh + gap);
-  svg.attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
-  const x = d3.scaleLinear().domain([0, 1]).range([lw, W - 4]);
+  const box = document.createElement('div'); box.className = 'donut'; el.appendChild(box);
+  const size = Math.max(160, Math.min(220, (el.clientWidth || 360) - 40)), R = size / 2, r0 = R * 0.58;
+  const svg = d3.select(box).append('svg').attr('width', size).attr('height', size).attr('viewBox', `${-R} ${-R} ${size} ${size}`)
+    .attr('role', 'img').attr('aria-label', '라인별 판매 비중 원형 그래프');
+  const arcs = d3.pie().sort(null).value((o) => o.share)(data);
+  const arc = d3.arc().innerRadius(r0).outerRadius(R - 2).padAngle(0.006);
   const tip = PDC.tip(el);
-  rows.forEach((o, i) => {
-    const g = svg.append('g').attr('transform', `translate(0,${i * (bh + gap)})`);
-    if (rows.length > 1) g.append('text').attr('x', lw - 8).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'end').text(o.label);
-    let acc = 0;
-    for (const s of series) {
-      const seg = o.segs.get(s); if (!seg || seg.share <= 0) continue;
-      const x0 = x(acc), w = x(acc + seg.share) - x0; acc += seg.share;
-      g.append('rect').attr('x', x0).attr('width', Math.max(0, w)).attr('height', bh).style('fill', s === '그 외' ? PD.lcol(7) : PD.lineCol(s));
-      if (w >= 28) g.append('text').attr('x', x0 + w / 2).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'middle')
-        .style('fill', '#fff').style('font-size', '12px').text(Math.round(seg.share * 100) + '%');
-    }
-    g.append('rect').attr('x', lw).attr('width', W - lw).attr('height', bh).style('fill', 'transparent')
-      .on('mousemove', (ev) => tip.show(ev, [`${o.label} ${PD.won(o.total)}`, ...series.filter((s) => (o.segs.get(s) || {}).share > 0.0005).map((s) => `${s} ${PD.pct(o.segs.get(s).share)} · ${PD.won(o.segs.get(s).amount)}` + (s === '그 외' && o.others.length ? ` (${o.others.join(', ')})` : ''))]))
-      .on('mouseleave', () => tip.hide());
-  });
+  svg.selectAll('path').data(arcs).join('path').attr('d', arc).style('fill', (a) => col(a.data.line))
+    .on('mousemove', (ev, a) => tip.show(ev, [`${a.data.line} ${PD.pct(a.data.share)}`, PD.won(a.data.amount), ...(a.data.line === '그 외' && others.length ? [others.join(', ')] : [])]))
+    .on('mouseleave', () => tip.hide());
+  svg.selectAll('text.lb').data(arcs.filter((a) => a.data.share >= 0.06)).join('text').attr('class', 'lb')
+    .attr('transform', (a) => `translate(${d3.arc().innerRadius((r0 + R) / 2).outerRadius((r0 + R) / 2).centroid(a)})`)
+    .attr('text-anchor', 'middle').attr('dy', '0.35em').style('fill', '#fff').style('font-size', '12px').style('pointer-events', 'none')
+    .text((a) => Math.round(a.data.share * 100) + '%');
+  svg.append('text').attr('text-anchor', 'middle').attr('dy', '-0.3em').style('font-size', '11px').text('합계');
+  svg.append('text').attr('text-anchor', 'middle').attr('dy', '1.1em').style('font-size', '14px').style('font-weight', '600').style('fill', 'var(--color-fg)').text(PD.won(total));
+  const ul = document.createElement('ul');
+  for (const o of data) {
+    const li = document.createElement('li');
+    const nm = document.createElement('span'); nm.className = 'nm';
+    const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = col(o.line);
+    nm.append(sw, o.line);
+    const pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = PD.pct(o.share);
+    const am = document.createElement('span'); am.className = 'am'; am.textContent = PD.won(o.amount);
+    li.append(nm, pc, am); ul.appendChild(li);
+  }
+  box.appendChild(ul);
 });
 
 dash.draw('prod-sel', (sel) => {
