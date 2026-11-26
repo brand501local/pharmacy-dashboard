@@ -122,11 +122,13 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd th[aria-sort="descending"]::after{content:" ▼";font-size:10px}
 .pd #line-table{display:flex;flex-direction:column}
 .pd #line-table .chart{flex:1;display:flex;align-items:center;justify-content:center;padding:var(--cds-gap-md) 0}
-.pd .donut{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--cds-gap-lg)}
+.pd .donut{display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;gap:var(--cds-gap-md);width:100%}
+.pd .donut ul{min-width:0}
 .pd .donut svg{flex:0 0 auto}
-.pd .donut ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:auto auto auto;gap:6px var(--cds-gap-md);font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums;align-items:center}
+.pd .donut ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:auto auto auto;gap:6px var(--cds-gap-sm);font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums;align-items:center}
 .pd .donut li{display:contents}
-.pd .donut .nm{display:inline-flex;align-items:center;gap:6px;color:var(--color-fg)}
+.pd .donut .nm{display:inline-flex;align-items:center;gap:6px;color:var(--color-fg);white-space:nowrap}
+.pd .donut .pc,.pd .donut .am{white-space:nowrap}
 .pd .donut .pc{text-align:right;font-weight:var(--cds-font-weight-medium)}
 .pd .donut .am{text-align:right;color:var(--color-fg-muted)}
 .pd .more button{font:inherit;border:1px solid var(--color-border-line);background:var(--color-panel);color:var(--color-fg);border-radius:var(--cds-radius);padding:4px 12px;cursor:pointer}
@@ -762,7 +764,7 @@ dash.draw('ln-ch-chart', (el) => {
   const total = data.reduce((a, o) => a + o.amount, 0);
   el.replaceChildren();
   const box = document.createElement('div'); box.className = 'donut'; el.appendChild(box);
-  const size = Math.max(160, Math.min(220, (el.clientWidth || 360) - 40)), R = size / 2, r0 = R * 0.58;
+  const size = Math.round(Math.max(110, Math.min(220, (el.clientWidth || 360) * 0.42))), R = size / 2, r0 = R * 0.58;
   const svg = d3.select(box).append('svg').attr('width', size).attr('height', size).attr('viewBox', `${-R} ${-R} ${size} ${size}`)
     .attr('role', 'img').attr('aria-label', '라인별 판매 비중 원형 그래프');
   const arcs = d3.pie().sort(null).value((o) => o.share)(data);
@@ -778,6 +780,8 @@ dash.draw('ln-ch-chart', (el) => {
   svg.append('text').attr('text-anchor', 'middle').attr('dy', '-0.3em').style('font-size', '11px').text('합계');
   svg.append('text').attr('text-anchor', 'middle').attr('dy', '1.1em').style('font-size', '14px').style('font-weight', '600').style('fill', 'var(--color-fg)').text(PD.won(total));
   const ul = document.createElement('ul');
+  const showAm = (el.clientWidth || 360) >= 420; // 좁으면 금액 열은 빼고(마우스를 올리면 보임) 비중만
+  if (!showAm) ul.style.gridTemplateColumns = 'auto auto';
   for (const o of data) {
     const li = document.createElement('li');
     const nm = document.createElement('span'); nm.className = 'nm';
@@ -785,7 +789,7 @@ dash.draw('ln-ch-chart', (el) => {
     nm.append(sw, o.line);
     const pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = PD.pct(o.share);
     const am = document.createElement('span'); am.className = 'am'; am.textContent = PD.won(o.amount);
-    li.append(nm, pc, am); ul.appendChild(li);
+    li.append(nm, pc); if (showAm) li.append(am); ul.appendChild(li);
   }
   box.appendChild(ul);
 });
