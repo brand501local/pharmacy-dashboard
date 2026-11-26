@@ -237,7 +237,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         </div>
         <div class="card" id="line-detail">
           <h2><span data-draw="ln-sel">—</span> 세부 비중 <span class="muted" data-draw="tag-ln3"></span></h2>
-          <p class="muted">원형 그래프나 목록에서 라인을 누르면 그 라인 안의 비중으로 바뀝니다.</p>
+          <div class="ctrl"><label for="ln-pick">라인</label><select id="ln-pick" class="dash-select" data-draw="ln-pick" aria-label="라인 선택" data-source="line_summary"></select><span>원형 그래프나 목록에서 라인을 눌러도 바뀝니다.</span></div>
           <div class="chart" data-draw="ln-detail-chart" data-source="line_detail"></div>
         </div>
       </div>
@@ -776,7 +776,17 @@ PD.curLine = () => {
   if (PD.state.line && t.get(PD.state.line) > 0) return PD.state.line;
   return [...t.entries()].filter(([g]) => g !== '그 외').sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 };
-PD.pickLine = (l) => { PD.state.line = l; for (const n of ['ln-ch-chart', 'ln-sel', 'ln-detail-chart']) dash.draw(n); };
+PD.pickLine = (l) => { PD.state.line = l; for (const n of ['ln-ch-chart', 'ln-sel', 'ln-pick', 'ln-detail-chart']) dash.draw(n); };
+dash.draw('ln-pick', (sel) => {
+  const d = dash.data('line_summary');
+  const t = new Map();
+  if (d.status === 'ok' && d.data) for (const r of d.data) { const g = PD.lineGrp(r.line); t.set(g, (t.get(g) || 0) + (+r.amount || 0)); }
+  const list = [...t.entries()].filter(([, a]) => a > 0).sort((a, b) => (a[0] === '그 외') - (b[0] === '그 외') || b[1] - a[1]).map(([g]) => g);
+  sel.replaceChildren(...list.map((g) => new Option(g, g)));
+  const cur = PD.curLine();
+  if (cur) sel.value = cur;
+  sel.onchange = () => PD.pickLine(sel.value);
+});
 dash.draw('ln-sel', (el) => { el.textContent = PD.curLine() || '—'; });
 dash.draw('ln-detail-chart', (el) => {
   const d = dash.data('line_detail');
