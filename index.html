@@ -680,9 +680,9 @@ window.PDC = {
     return svg;
   },
   // 세로 누적 막대 (rows {key, fm, kd}), label(key) -> 축 글자
-  vbar(el, rows, label, fmtY, fmtV, aria) {
+  vbar(el, rows, label, fmtY, fmtV, aria, hOpt) {
     el.replaceChildren();
-    const W = el.clientWidth || 600, H = 240, m = { t: 10, r: 10, b: 24, l: 10 };
+    const W = el.clientWidth || 600, H = hOpt || 240, m = { t: 10, r: 10, b: 24, l: 10 };
     const svg = d3.select(el).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', aria);
     const one = rows.length > 0 && rows[0].total != null;
     const tot = one ? (r) => +r.total || 0 : PD.sum;
@@ -812,7 +812,7 @@ dash.draw('ptrend-chart', (el) => {
     o.total += +r.qty || 0;
   }
   if (PDC.empty(el, rows)) return;
-  PDC.vbar(el, rows, PDC.keyLabel, d3.format(',d'), (v) => PD.int(v) + '개', `${prod || ''} 판매량 추이`);
+  PDC.vbar(el, rows, PDC.keyLabel, d3.format(',d'), (v) => PD.int(v) + '개', `${prod || ''} 판매량 추이`, (el.clientWidth || 600) >= 420 ? 360 : 260);
 });
 
 PD.reShow = (n) => { PD.state.reLimit = n; dash.draw('re-rows'); dash.draw('re-more'); };
