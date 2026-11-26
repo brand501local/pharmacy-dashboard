@@ -221,7 +221,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         </div>
         <div class="card" id="line-table">
           <h2>라인 판매 비중 <span class="muted" data-draw="tag-ln2"></span></h2>
-          <p class="muted">전체와 채널별 매출을 100%로 놓고 라인이 차지하는 비율입니다.</p>
+          <p class="muted">선택한 기간 전체 매출을 100%로 놓고 라인이 차지하는 비율입니다.</p>
           <div class="chart" data-draw="ln-ch-chart" data-source="line_summary"></div>
         </div>
       </div>
@@ -739,7 +739,7 @@ dash.draw('ln-ch-chart', (el) => {
   const d = dash.data('line_summary');
   if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
   const grp = (l) => (PD.LMAIN.includes(l) ? l : '그 외');
-  const cols = [['전체', 'share', 'amount'], ['폐쇄몰', 'share_fm', 'amount_fm'], ['KD', 'share_kd', 'amount_kd'], ['바로팜', 'share_bp', 'amount_bp']];
+  const cols = [['전체', 'share', 'amount']];
   const rows = cols.map(([label, sk, ak]) => {
     const o = { label, segs: new Map(), others: [] };
     for (const r of d.data) {
@@ -754,27 +754,27 @@ dash.draw('ln-ch-chart', (el) => {
   const series = [...PD.LMAIN, '그 외'].filter((s) => rows.some((o) => (o.segs.get(s) || {}).share > 0));
   el.replaceChildren();
   const lg = document.createElement('div'); lg.className = 'legend';
-  series.forEach((s) => { const sp = document.createElement('span'); const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = s === '그 외' ? PD.lcol(7) : PD.lineCol(s); sp.append(sw, s); lg.appendChild(sp); });
+  series.forEach((s) => { const sp = document.createElement('span'); const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = s === '그 외' ? PD.lcol(7) : PD.lineCol(s); const v = rows.length === 1 ? (rows[0].segs.get(s) || {}).share || 0 : null; sp.append(sw, v == null ? s : `${s} ${PD.pct(v)}`); lg.appendChild(sp); });
   el.appendChild(lg);
-  const W = el.clientWidth || 360, bh = 34, gap = 14;
-  const svg = d3.select(el).append('svg').attr('width', '100%').attr('role', 'img').attr('aria-label', '전체와 채널별 라인 매출 비중 100% 누적 가로 막대');
+  const W = el.clientWidth || 360, bh = 56, gap = 0;
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('role', 'img').attr('aria-label', '전체 매출 대비 라인별 판매 비중 100% 누적 가로 막대');
   const meas = svg.append('g'); let lw = 0;
   rows.forEach((o) => { lw = Math.max(lw, meas.append('text').text(o.label).node().getComputedTextLength()); });
-  meas.remove(); lw += 10;
+  meas.remove(); lw = rows.length > 1 ? lw + 10 : 0;
   const H = rows.length * (bh + gap);
   svg.attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
   const x = d3.scaleLinear().domain([0, 1]).range([lw, W - 4]);
   const tip = PDC.tip(el);
   rows.forEach((o, i) => {
     const g = svg.append('g').attr('transform', `translate(0,${i * (bh + gap)})`);
-    g.append('text').attr('x', lw - 8).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'end').text(o.label);
+    if (rows.length > 1) g.append('text').attr('x', lw - 8).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'end').text(o.label);
     let acc = 0;
     for (const s of series) {
       const seg = o.segs.get(s); if (!seg || seg.share <= 0) continue;
       const x0 = x(acc), w = x(acc + seg.share) - x0; acc += seg.share;
       g.append('rect').attr('x', x0).attr('width', Math.max(0, w)).attr('height', bh).style('fill', s === '그 외' ? PD.lcol(7) : PD.lineCol(s));
-      if (w >= 34) g.append('text').attr('x', x0 + w / 2).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'middle')
-        .style('fill', '#fff').style('font-size', '11px').text(Math.round(seg.share * 100) + '%');
+      if (w >= 28) g.append('text').attr('x', x0 + w / 2).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'middle')
+        .style('fill', '#fff').style('font-size', '12px').text(Math.round(seg.share * 100) + '%');
     }
     g.append('rect').attr('x', lw).attr('width', W - lw).attr('height', bh).style('fill', 'transparent')
       .on('mousemove', (ev) => tip.show(ev, [`${o.label} ${PD.won(o.total)}`, ...series.filter((s) => (o.segs.get(s) || {}).share > 0.0005).map((s) => `${s} ${PD.pct(o.segs.get(s).share)} · ${PD.won(o.segs.get(s).amount)}` + (s === '그 외' && o.others.length ? ` (${o.others.join(', ')})` : ''))]))
