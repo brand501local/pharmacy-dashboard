@@ -732,7 +732,7 @@ PD.lnTop = (f) => (el) => { const d = dash.data('line_summary'); el.textContent 
 // 라인 색: 기간이 바뀌어도 같은 라인은 같은 색, 작은 라인은 '그 외'
 PD.LMAIN = ['팔트', '칼슘', 'TX', '필샷', '칵톡스', '에스징크', '멜라씨이', '나이아신아마이드'];
 // 팔트는 대시보드 기본색, 나머지는 사용자 지정(칼슘 보라, TX 푸른색)과 구분용 고정색
-PD.LCOLOR = { 칼슘: '#8e5cd9', TX: '#17a2c4', 필샷: '#e8833a', 칵톡스: '#3aa676', 에스징크: '#8cc63f', 멜라씨이: '#e3b52f', 나이아신아마이드: '#e06a9a', '그 외': '#8a8a84' };
+PD.LCOLOR = { 칼슘: '#8e5cd9', TX: '#17a2c4', 필샷: '#e8833a', 칵톡스: '#3aa676', 에스징크: '#8cc63f', 멜라씨이: '#e3b52f', 나이아신아마이드: '#222222', '그 외': '#8a8a84' };
 PD.lineCol = (l) => (l === '팔트' ? PD.lcol(0) : PD.LCOLOR[l] || PD.LCOLOR['그 외']);
 dash.draw('ln-ch-chart', (el) => {
   const d = dash.data('line_summary');
