@@ -220,14 +220,9 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
           <div class="chart" data-draw="line-chart" data-source="line_summary"></div>
         </div>
         <div class="card" id="line-table">
-          <h2>채널별 라인 비중</h2>
-          <p class="muted">폐쇄몰·KD·바로팜 열은 각 채널 매출 안에서 그 라인이 차지하는 비율입니다.</p>
-          <div class="tw">
-            <table data-source="line_summary" data-row-key="line">
-              <thead><tr><th data-field="line">라인</th><th data-field="amount" class="n">매출(원)</th><th data-field="share" class="n">전체 비중</th><th data-field="qty_share" class="n">수량 비중</th><th data-field="share_fm" class="n">폐쇄몰</th><th data-field="share_kd" class="n">KD</th><th data-field="share_bp" class="n">바로팜</th></tr></thead>
-              <tbody data-draw="ln-rows"></tbody>
-            </table>
-          </div>
+          <h2>채널별 라인 비중 <span class="muted" data-draw="tag-ln2"></span></h2>
+          <p class="muted">전체와 채널별 매출을 100%로 놓고 라인이 차지하는 비율입니다.</p>
+          <div class="chart" data-draw="ln-ch-chart" data-source="line_summary"></div>
         </div>
       </div>
     </div>
@@ -598,7 +593,7 @@ dash.onData(() => {
   const info = (field) => (el) => { const d = dash.data('period_info'); el.textContent = d.status === 'ok' && d.data && d.data[0] ? d.data[0][field] : '—'; };
   dash.draw('range', info('range'));
   dash.draw('basis', info('basis'));
-  for (const t of ['tag-ch', 'tag-pr', 'tag-re', 'tag-ph', 'tag-rg', 'tag-ln']) dash.draw(t, info('tag'));
+  for (const t of ['tag-ch', 'tag-pr', 'tag-re', 'tag-ph', 'tag-rg', 'tag-ln', 'tag-ln2']) dash.draw(t, info('tag'));
   const avg = () => { const d = dash.data('period_info'); return !!(d.status === 'ok' && d.data && d.data[0] && d.data[0].period !== 'month'); };
   dash.draw('lead-pre', (el) => { el.textContent = avg() ? '월평균' : '이 기간'; });
   dash.draw('lead-pre2', (el) => { el.textContent = avg() ? '월평균 주문 약국' : '주문한 약국'; });
@@ -737,17 +732,54 @@ dash.draw('line-chart', (el) => {
     (x) => `${PD.pct(x.r.share)} · ${PD.won(x.total)}`).attr('aria-label', '라인별 매출 비중 막대');
 });
 
-dash.draw('ln-rows', (tb) => {
+// 라인 색: 기간이 바뀌어도 같은 라인은 같은 색, 작은 라인은 '그 외'
+PD.LMAIN = ['팔트', '칼슘', 'TX', '필샷', '칵톡스', '에스징크', '멜라씨이'];
+PD.lineCol = (l) => PD.lcol(PD.LMAIN.includes(l) ? PD.LMAIN.indexOf(l) : 7);
+dash.draw('ln-ch-chart', (el) => {
   const d = dash.data('line_summary');
-  tb.replaceChildren();
-  if (d.status !== 'ok' || !d.data) return;
-  for (const r of d.data) {
-    const tr = document.createElement('tr');
-    tr.dataset.key = encodeURIComponent(r.line);
-    const cells = [[r.line], [PD.int(r.amount), 'n'], [PD.pct(r.share), 'n'], [PD.pct(r.qty_share), 'n'], [PD.pct(r.share_fm), 'n'], [PD.pct(r.share_kd), 'n'], [PD.pct(r.share_bp), 'n']];
-    for (const [v, c] of cells) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.appendChild(td); }
-    tb.appendChild(tr);
-  }
+  if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
+  const grp = (l) => (PD.LMAIN.includes(l) ? l : '그 외');
+  const cols = [['전체', 'share', 'amount'], ['폐쇄몰', 'share_fm', 'amount_fm'], ['KD', 'share_kd', 'amount_kd'], ['바로팜', 'share_bp', 'amount_bp']];
+  const rows = cols.map(([label, sk, ak]) => {
+    const o = { label, segs: new Map(), others: [] };
+    for (const r of d.data) {
+      const g = grp(r.line), v = +r[sk] || 0;
+      const seg = o.segs.get(g) || { line: g, share: 0, amount: 0 };
+      seg.share += v; seg.amount += +r[ak] || 0; o.segs.set(g, seg);
+      if (g === '그 외' && v > 0) o.others.push(`${r.line} ${PD.pct(v)}`);
+    }
+    o.total = [...o.segs.values()].reduce((a, x) => a + x.amount, 0);
+    return o;
+  }).filter((o) => o.total > 0);
+  const series = [...PD.LMAIN, '그 외'].filter((s) => rows.some((o) => (o.segs.get(s) || {}).share > 0));
+  el.replaceChildren();
+  const lg = document.createElement('div'); lg.className = 'legend';
+  series.forEach((s) => { const sp = document.createElement('span'); const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = s === '그 외' ? PD.lcol(7) : PD.lineCol(s); sp.append(sw, s); lg.appendChild(sp); });
+  el.appendChild(lg);
+  const W = el.clientWidth || 360, bh = 34, gap = 14;
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('role', 'img').attr('aria-label', '전체와 채널별 라인 매출 비중 100% 누적 가로 막대');
+  const meas = svg.append('g'); let lw = 0;
+  rows.forEach((o) => { lw = Math.max(lw, meas.append('text').text(o.label).node().getComputedTextLength()); });
+  meas.remove(); lw += 10;
+  const H = rows.length * (bh + gap);
+  svg.attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+  const x = d3.scaleLinear().domain([0, 1]).range([lw, W - 4]);
+  const tip = PDC.tip(el);
+  rows.forEach((o, i) => {
+    const g = svg.append('g').attr('transform', `translate(0,${i * (bh + gap)})`);
+    g.append('text').attr('x', lw - 8).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'end').text(o.label);
+    let acc = 0;
+    for (const s of series) {
+      const seg = o.segs.get(s); if (!seg || seg.share <= 0) continue;
+      const x0 = x(acc), w = x(acc + seg.share) - x0; acc += seg.share;
+      g.append('rect').attr('x', x0).attr('width', Math.max(0, w)).attr('height', bh).style('fill', s === '그 외' ? PD.lcol(7) : PD.lineCol(s));
+      if (w >= 34) g.append('text').attr('x', x0 + w / 2).attr('y', bh / 2).attr('dy', '0.35em').attr('text-anchor', 'middle')
+        .style('fill', '#fff').style('font-size', '11px').text(Math.round(seg.share * 100) + '%');
+    }
+    g.append('rect').attr('x', lw).attr('width', W - lw).attr('height', bh).style('fill', 'transparent')
+      .on('mousemove', (ev) => tip.show(ev, [`${o.label} ${PD.won(o.total)}`, ...series.filter((s) => (o.segs.get(s) || {}).share > 0.0005).map((s) => `${s} ${PD.pct(o.segs.get(s).share)} · ${PD.won(o.segs.get(s).amount)}`), ...(o.others.length ? ['그 외: ' + o.others.join(', ')] : [])]))
+      .on('mouseleave', () => tip.hide());
+  });
 });
 
 dash.draw('prod-sel', (sel) => {
