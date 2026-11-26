@@ -120,7 +120,10 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd th[data-field]:hover{color:var(--color-fg)}
 .pd th[aria-sort="ascending"]::after{content:" ▲";font-size:10px}
 .pd th[aria-sort="descending"]::after{content:" ▼";font-size:10px}
-.pd #line-table{display:flex;flex-direction:column}
+.pd #line-table,.pd #line-detail{display:flex;flex-direction:column}
+.pd #line-detail .chart{flex:1;display:flex;flex-direction:column;justify-content:center}
+.pd .donut path,.pd .donut li span{cursor:pointer}
+.pd .donut li.sel span{font-weight:700;color:var(--color-fg)}
 .pd #product-trend{display:flex;flex-direction:column}
 .pd #product-trend .chart{flex:1;display:flex;flex-direction:column;justify-content:center}
 .pd #line-table .chart{flex:1;display:flex;align-items:center;justify-content:center;padding:var(--cds-gap-md) 0}
@@ -231,6 +234,11 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
           <h2>라인 판매 비중 <span class="muted" data-draw="tag-ln2"></span></h2>
           <p class="muted">선택한 기간 전체 매출을 100%로 놓고 라인이 차지하는 비율입니다.</p>
           <div class="chart" data-draw="ln-ch-chart" data-source="line_summary" style="min-height:220px"></div>
+        </div>
+        <div class="card" id="line-detail">
+          <h2><span data-draw="ln-sel">—</span> 세부 비중 <span class="muted" data-draw="tag-ln3"></span></h2>
+          <p class="muted">원형 그래프나 목록에서 라인을 누르면 그 라인 안의 비중으로 바뀝니다.</p>
+          <div class="chart" data-draw="ln-detail-chart" data-source="line_detail"></div>
         </div>
       </div>
     </div>
@@ -493,6 +501,12 @@ dash.calc('product_summary', {
   },
 });
 
+// 원형 그래프에 따로 보이는 라인(나머지는 '그 외')
+PD.LMAIN = ['팔트', '칼슘', 'TX', '필샷', '칵톡스', '에스징크', '멜라씨이', '나이아신아마이드'];
+PD.lineGrp = (l) => (PD.LMAIN.includes(l || '기타') ? l : '그 외');
+// 세부 구분: 팔트는 제품명 첫 단어(아이팔트·넥라인팔트·넥스팔트·페이스팔트), '그 외'는 라인 이름, 나머지는 제품
+PD.lineSub = (g, r) => (g === '그 외' ? r.line || '기타' : g === '팔트' ? String(r.product).split(' ')[0] : r.product);
+
 dash.calc('line_summary', {
   title: '라인별 판매 합계',
   description: '선택한 기간의 주문 내역을 제품 라인(팔트·칼슘·TX·필샷 등)별로 합산한 매출·판매량과 전체 대비 비중, 채널별 매출 안에서 라인이 차지하는 비율. 최근 3개월·2026년 전체의 매출·판매량은 달 수로 나눈 월평균 (KD 매출은 추정 배분값, 바로팜은 실주문금액)',
@@ -514,6 +528,26 @@ dash.calc('line_summary', {
       amount_fm: o.amount_fm / n, amount_kd: o.amount_kd / n, amount_bp: o.amount_bp / n,
       share_fm: chT.fm ? o.amount_fm / chT.fm : 0, share_kd: chT.kd ? o.amount_kd / chT.kd : 0, share_bp: chT.bp ? o.amount_bp / chT.bp : 0,
     })).sort((a, b) => b.amount - a.amount);
+  },
+});
+
+dash.calc('line_detail', {
+  title: '라인 세부 비중',
+  description: '선택한 기간의 주문 내역을 원형 그래프의 라인별로 나눠, 라인 안에서 세부 항목(팔트는 아이팔트·넥라인팔트·넥스팔트·페이스팔트, 그 외 라인은 제품, 그 외 묶음은 라인)이 차지하는 매출 비율을 계산. 최근 3개월·2026년 전체의 매출·수량은 달 수로 나눈 월평균',
+  inputs: ['order_lines', 'channel_daily'],
+  fn: (lines, daily) => {
+    const m = new Map(), tot = new Map();
+    for (const r of inPeriod(lines, daily)) {
+      const g = PD.lineGrp(r.line || '기타'), sub = PD.lineSub(g, r), a = +r.amount || 0, q = +r.qty || 0, k = g + '|' + sub;
+      const o = m.get(k) || { line: g, sub, amount: 0, qty: 0, items: new Map() };
+      o.amount += a; o.qty += q; o.items.set(r.product, (o.items.get(r.product) || 0) + a);
+      m.set(k, o); tot.set(g, (tot.get(g) || 0) + a);
+    }
+    const n = PD.avgN(daily);
+    return [...m.values()].map((o) => ({
+      line: o.line, sub: o.sub, amount: o.amount / n, qty: o.qty / n, share: tot.get(o.line) ? o.amount / tot.get(o.line) : 0,
+      items: o.items.size > 1 ? [...o.items.entries()].sort((a, b) => b[1] - a[1]).map(([p, a]) => `${p} ${PD.pct(o.amount ? a / o.amount : 0)}`).join(' | ') : '',
+    })).sort((a, b) => a.line.localeCompare(b.line, 'ko') || b.amount - a.amount);
   },
 });
 
@@ -601,7 +635,7 @@ dash.onData(() => {
   const info = (field) => (el) => { const d = dash.data('period_info'); el.textContent = d.status === 'ok' && d.data && d.data[0] ? d.data[0][field] : '—'; };
   dash.draw('range', info('range'));
   dash.draw('basis', info('basis'));
-  for (const t of ['tag-ch', 'tag-pr', 'tag-re', 'tag-ph', 'tag-rg', 'tag-ln', 'tag-ln2']) dash.draw(t, info('tag'));
+  for (const t of ['tag-ch', 'tag-pr', 'tag-re', 'tag-ph', 'tag-rg', 'tag-ln', 'tag-ln2', 'tag-ln3']) dash.draw(t, info('tag'));
   const avg = () => { const d = dash.data('period_info'); return !!(d.status === 'ok' && d.data && d.data[0] && d.data[0].period !== 'month'); };
   dash.draw('lead-pre', (el) => { el.textContent = avg() ? '월평균' : '이 기간'; });
   dash.draw('lead-pre2', (el) => { el.textContent = avg() ? '월평균 주문 약국' : '주문한 약국'; });
@@ -730,14 +764,41 @@ PD.lcol = (i) => dash.colors[i] || PD.LC[i % PD.LC.length];
 PD.lnTop = (f) => (el) => { const d = dash.data('line_summary'); el.textContent = d.status === 'ok' && d.data && d.data[0] ? f(d.data[0]) : '—'; };
 
 // 라인 색: 기간이 바뀌어도 같은 라인은 같은 색, 작은 라인은 '그 외'
-PD.LMAIN = ['팔트', '칼슘', 'TX', '필샷', '칵톡스', '에스징크', '멜라씨이', '나이아신아마이드'];
 // 팔트는 대시보드 기본색, 나머지는 사용자 지정(칼슘 보라, TX 푸른색)과 구분용 고정색
 PD.LCOLOR = { 칼슘: '#8e5cd9', TX: '#17a2c4', 필샷: '#e8833a', 칵톡스: '#3aa676', 에스징크: '#8cc63f', 멜라씨이: '#e3b52f', 나이아신아마이드: '#222222', '그 외': '#8a8a84' };
 PD.lineCol = (l) => (l === '팔트' ? PD.lcol(0) : PD.LCOLOR[l] || PD.LCOLOR['그 외']);
+// 세부 비중에 보여 줄 라인: 누른 라인, 없으면 이 기간 비중이 가장 큰 라인
+PD.curLine = () => {
+  const d = dash.data('line_summary');
+  if (d.status !== 'ok' || !d.data || !d.data.length) return null;
+  const t = new Map();
+  for (const r of d.data) { const g = PD.lineGrp(r.line); t.set(g, (t.get(g) || 0) + (+r.amount || 0)); }
+  if (PD.state.line && t.get(PD.state.line) > 0) return PD.state.line;
+  return [...t.entries()].filter(([g]) => g !== '그 외').sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+};
+PD.pickLine = (l) => { PD.state.line = l; for (const n of ['ln-ch-chart', 'ln-sel', 'ln-detail-chart']) dash.draw(n); };
+dash.draw('ln-sel', (el) => { el.textContent = PD.curLine() || '—'; });
+dash.draw('ln-detail-chart', (el) => {
+  const d = dash.data('line_detail');
+  if (!PDC.status(el, d)) return;
+  const cur = PD.curLine();
+  let rows = d.data.filter((r) => r.line === cur);
+  if (PDC.empty(el, rows)) return;
+  if (rows.length > 10) {
+    const rest = rows.slice(9);
+    rows = [...rows.slice(0, 9), { sub: `나머지 ${rest.length}개`, amount: d3.sum(rest, (r) => r.amount), qty: d3.sum(rest, (r) => r.qty), share: d3.sum(rest, (r) => r.share), items: rest.map((r) => `${r.sub} ${PD.pct(r.share)}`).join(' | ') }];
+  }
+  const svg = PDC.hbar(el, rows.map((r) => ({ label: r.sub, total: r.amount, r })), PD.won,
+    (x) => [`라인 안 비중 ${PD.pct(x.r.share)}`, `판매량 ${PD.int(x.r.qty)}개`, ...(x.r.items ? x.r.items.split(' | ') : [])],
+    (x) => `${PD.pct(x.r.share)} · ${PD.won(x.total)}`);
+  svg.attr('aria-label', `${cur} 세부 비중 막대`);
+  svg.selectAll('g.r').select('rect').style('fill', PD.lineCol(cur));
+});
+
 dash.draw('ln-ch-chart', (el) => {
   const d = dash.data('line_summary');
   if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
-  const grp = (l) => (PD.LMAIN.includes(l) ? l : '그 외');
+  const grp = PD.lineGrp;
   const segs = new Map(), others = [];
   for (const r of d.data) {
     const g = grp(r.line), v = +r.share || 0;
@@ -750,6 +811,7 @@ dash.draw('ln-ch-chart', (el) => {
     .sort((a, b) => (a.line === '그 외') - (b.line === '그 외') || b.share - a.share);
   const col = (s) => PD.lineCol(s);
   const total = data.reduce((a, o) => a + o.amount, 0);
+  const cur = PD.curLine();
   el.replaceChildren();
   const box = document.createElement('div'); box.className = 'donut'; el.appendChild(box);
   const size = Math.round(Math.max(110, Math.min(220, (el.clientWidth || 360) * 0.42))), R = size / 2, r0 = R * 0.58;
@@ -758,7 +820,8 @@ dash.draw('ln-ch-chart', (el) => {
   const arcs = d3.pie().sort(null).value((o) => o.share)(data);
   const arc = d3.arc().innerRadius(r0).outerRadius(R - 2).padAngle(0.006);
   const tip = PDC.tip(el);
-  svg.selectAll('path').data(arcs).join('path').attr('d', arc).style('fill', (a) => col(a.data.line))
+  svg.selectAll('path').data(arcs).join('path').attr('d', arc).style('fill', (a) => col(a.data.line)).style('opacity', (a) => (!cur || a.data.line === cur ? 1 : 0.45))
+    .on('click', (ev, a) => PD.pickLine(a.data.line))
     .on('mousemove', (ev, a) => tip.show(ev, [`${a.data.line} ${PD.pct(a.data.share)}`, PD.won(a.data.amount), ...(a.data.line === '그 외' && others.length ? [others.join(', ')] : [])]))
     .on('mouseleave', () => tip.hide());
   svg.selectAll('text.lb').data(arcs.filter((a) => a.data.share >= 0.06)).join('text').attr('class', 'lb')
@@ -777,7 +840,10 @@ dash.draw('ln-ch-chart', (el) => {
     nm.append(sw, o.line);
     const pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = PD.pct(o.share);
     const am = document.createElement('span'); am.className = 'am'; am.textContent = PD.won(o.amount);
-    li.append(nm, pc); if (showAm) li.append(am); ul.appendChild(li);
+    li.append(nm, pc); if (showAm) li.append(am);
+    if (o.line === cur) li.className = 'sel';
+    for (const c of [nm, pc, am]) c.addEventListener('click', () => PD.pickLine(o.line));
+    ul.appendChild(li);
   }
   box.appendChild(ul);
 });
