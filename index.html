@@ -745,7 +745,9 @@ dash.draw('ln-ch-chart', (el) => {
     o.share += v; o.amount += +r.amount || 0; segs.set(g, o);
     if (g === '그 외' && v > 0) others.push(`${r.line} ${PD.pct(v)}`);
   }
-  const data = [...PD.LMAIN, '그 외'].map((s) => segs.get(s)).filter((o) => o && o.share > 0);
+  // 큰 라인부터(색은 라인별 고정), '그 외'는 항상 마지막
+  const data = [...PD.LMAIN, '그 외'].map((s) => segs.get(s)).filter((o) => o && o.share > 0)
+    .sort((a, b) => (a.line === '그 외') - (b.line === '그 외') || b.share - a.share);
   const col = (s) => PD.lineCol(s);
   const total = data.reduce((a, o) => a + o.amount, 0);
   el.replaceChildren();
