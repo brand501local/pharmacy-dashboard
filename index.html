@@ -225,11 +225,6 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
     <h2>제품별 판매</h2>
     <div class="stack" id="lines">
       <div class="grid2">
-        <div class="card" id="line-share">
-          <h2>라인별 매출 비중 <span class="muted" data-draw="tag-ln"></span></h2>
-          <p class="muted"><b data-draw="ln-top" data-source="line_summary" data-field="line" data-row="0">—</b> 라인이 매출의 <b data-draw="ln-top-share" data-source="line_summary" data-field="share" data-row="0">—</b>를 차지합니다. 막대 끝은 매출 비중 · 매출액.</p>
-          <div class="chart" data-draw="line-chart" data-source="line_summary"></div>
-        </div>
         <div class="card" id="line-table">
           <h2>라인 판매 비중 <span class="muted" data-draw="tag-ln2"></span></h2>
           <p class="muted">선택한 기간 전체 매출을 100%로 놓고 라인이 차지하는 비율입니다.</p>
@@ -731,17 +726,6 @@ dash.draw('product-chart', (el) => {
 PD.LC = ['#2f6fdb', '#e8833a', '#3aa676', '#b04fc9', '#c9a227', '#d4566f', '#4fa3c9', '#8a8a84'];
 PD.lcol = (i) => dash.colors[i] || PD.LC[i % PD.LC.length];
 PD.lnTop = (f) => (el) => { const d = dash.data('line_summary'); el.textContent = d.status === 'ok' && d.data && d.data[0] ? f(d.data[0]) : '—'; };
-dash.draw('ln-top', PD.lnTop((r) => r.line));
-dash.draw('ln-top-share', PD.lnTop((r) => PD.pct(r.share)));
-
-dash.draw('line-chart', (el) => {
-  const d = dash.data('line_summary');
-  if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
-  const rows = d.data.map((r) => ({ label: r.line, total: r.amount, r }));
-  PDC.hbar(el, rows, PD.won,
-    (x) => [`비중 ${PD.pct(x.r.share)}`, `판매량 ${PD.int(x.r.qty)}개 (${PD.pct(x.r.qty_share)})`, `제품 ${x.r.products}개`, `폐쇄몰 ${PD.won(x.r.amount_fm)} · KD ${PD.won(x.r.amount_kd)} · 바로팜 ${PD.won(x.r.amount_bp)}`],
-    (x) => `${PD.pct(x.r.share)} · ${PD.won(x.total)}`).attr('aria-label', '라인별 매출 비중 막대');
-});
 
 // 라인 색: 기간이 바뀌어도 같은 라인은 같은 색, 작은 라인은 '그 외'
 PD.LMAIN = ['팔트', '칼슘', 'TX', '필샷', '칵톡스', '에스징크', '멜라씨이', '나이아신아마이드'];
