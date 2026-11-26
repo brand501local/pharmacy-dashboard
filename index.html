@@ -120,6 +120,8 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 .pd th[data-field]:hover{color:var(--color-fg)}
 .pd th[aria-sort="ascending"]::after{content:" ▲";font-size:10px}
 .pd th[aria-sort="descending"]::after{content:" ▼";font-size:10px}
+.pd #line-table{display:flex;flex-direction:column}
+.pd #line-table .chart{flex:1;display:flex;align-items:center;justify-content:center;padding:var(--cds-gap-md) 0}
 .pd .donut{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--cds-gap-lg)}
 .pd .donut svg{flex:0 0 auto}
 .pd .donut ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:auto auto auto;gap:6px var(--cds-gap-md);font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums;align-items:center}
@@ -741,7 +743,9 @@ dash.draw('line-chart', (el) => {
 
 // 라인 색: 기간이 바뀌어도 같은 라인은 같은 색, 작은 라인은 '그 외'
 PD.LMAIN = ['팔트', '칼슘', 'TX', '필샷', '칵톡스', '에스징크', '멜라씨이'];
-PD.lineCol = (l) => PD.lcol(PD.LMAIN.includes(l) ? PD.LMAIN.indexOf(l) : 7);
+// 팔트는 대시보드 기본색, 나머지는 사용자 지정(칼슘 보라, TX 푸른색)과 구분용 고정색
+PD.LCOLOR = { 칼슘: '#8e5cd9', TX: '#17a2c4', 필샷: '#e8833a', 칵톡스: '#3aa676', 에스징크: '#d4566f', 멜라씨이: '#e3b52f', '그 외': '#8a8a84' };
+PD.lineCol = (l) => (l === '팔트' ? PD.lcol(0) : PD.LCOLOR[l] || PD.LCOLOR['그 외']);
 dash.draw('ln-ch-chart', (el) => {
   const d = dash.data('line_summary');
   if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
@@ -754,7 +758,7 @@ dash.draw('ln-ch-chart', (el) => {
     if (g === '그 외' && v > 0) others.push(`${r.line} ${PD.pct(v)}`);
   }
   const data = [...PD.LMAIN, '그 외'].map((s) => segs.get(s)).filter((o) => o && o.share > 0);
-  const col = (s) => (s === '그 외' ? PD.lcol(7) : PD.lineCol(s));
+  const col = (s) => PD.lineCol(s);
   const total = data.reduce((a, o) => a + o.amount, 0);
   el.replaceChildren();
   const box = document.createElement('div'); box.className = 'donut'; el.appendChild(box);
