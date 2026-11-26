@@ -777,7 +777,7 @@ dash.draw('ln-ch-chart', (el) => {
         .style('fill', '#fff').style('font-size', '11px').text(Math.round(seg.share * 100) + '%');
     }
     g.append('rect').attr('x', lw).attr('width', W - lw).attr('height', bh).style('fill', 'transparent')
-      .on('mousemove', (ev) => tip.show(ev, [`${o.label} ${PD.won(o.total)}`, ...series.filter((s) => (o.segs.get(s) || {}).share > 0.0005).map((s) => `${s} ${PD.pct(o.segs.get(s).share)} · ${PD.won(o.segs.get(s).amount)}`), ...(o.others.length ? ['그 외: ' + o.others.join(', ')] : [])]))
+      .on('mousemove', (ev) => tip.show(ev, [`${o.label} ${PD.won(o.total)}`, ...series.filter((s) => (o.segs.get(s) || {}).share > 0.0005).map((s) => `${s} ${PD.pct(o.segs.get(s).share)} · ${PD.won(o.segs.get(s).amount)}` + (s === '그 외' && o.others.length ? ` (${o.others.join(', ')})` : ''))]))
       .on('mouseleave', () => tip.hide());
   });
 });
