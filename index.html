@@ -231,7 +231,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         </div>
       </div>
       <div class="card" id="line-trend">
-        <h2>월별 라인 비중 추이 <span class="muted">2026년 전체, 그 달 매출 대비</span></h2>
+        <h2>라인 비중 추이 <span class="muted" data-draw="ltrend-unit" data-source="period_info">—</span></h2>
         <div class="chart" data-draw="ltrend-chart" data-source="line_trend"></div>
       </div>
     </div>
@@ -317,7 +317,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
       <li><b>폐쇄몰 제품·약국·지역 매출</b>: ‘폐쇄몰 주문원장’의 상품구매금액(환불·할인 차감 전). 발주일이 빈 행은 주문번호 앞자리 날짜로 보완. 시트 ‘폐쇄몰_매출’ 탭은 등록된 상품만 합산하므로, 새 상품이 있던 달(2·3·8월 등)은 원장 합계가 시트보다 최대 6% 정도 많음. 채널 카드는 시트 값, 제품·약국·지역은 원장 값.</li>
       <li><b>KD 제품·약국·지역 매출은 추정치.</b> KD 주문원장에 금액이 없는 달이 있어 ‘KD_매출’ 탭의 일별 매출을 그날 주문 수량 비율로 배분. 채널 합계는 시트와 동일.</li>
       <li><b>KD 판매량</b>: 채널 카드는 ‘KD_매출’ 탭 판매량, 제품 차트는 주문원장 수량. 11월은 원장 1,280개, 시트 780개로 차이 있음.</li>
-      <li><b>라인</b>: 제품명으로 정한 제품 라인. 아이팔트·넥/페이스팔트는 ‘팔트’, 시멘리트·칼슘 제품은 ‘칼슘’, 제품명에 ‘필샷’이 들어가면 ‘필샷’, 필샷이 없는 코직애씨드 제품은 ‘코직애씨드’, 라인을 정하지 않은 제품(엑소좀·비피·본덱스 등)은 ‘기타’. 라인 비중은 주문 내역(셀아웃) 기준이라 채널 카드(셀인) 합계와 다름. 월별 라인 비중 추이는 기간 버튼과 관계없이 2026년 모든 달을 표시.</li>
+      <li><b>라인</b>: 제품명으로 정한 제품 라인. 아이팔트·넥/페이스팔트는 ‘팔트’, 시멘리트·칼슘 제품은 ‘칼슘’, 제품명에 ‘필샷’이 들어가면 ‘필샷’, 필샷이 없는 코직애씨드 제품은 ‘코직애씨드’, 라인을 정하지 않은 제품(엑소좀·비피·본덱스 등)은 ‘기타’. 라인 비중은 주문 내역(셀아웃) 기준이라 채널 카드(셀인) 합계와 다름. 라인 비중 추이는 기간 버튼을 따라 ‘이번 달’은 일별, ‘최근 3개월’·‘2026년 전체’는 월별 비중과 기간 평균 비중(기간 합계 매출 대비)을 표시.</li>
       <li><b>제품명 통일</b>: 채널·월마다 다른 상품명을 키워드 규칙으로 통일. 옵션(댕글러·POP)과 [예약 판매] 같은 머리말은 무시, ‘레티놀/레티날 아이백 크림 10ml’, ‘TX 기미 세럼/앰플 알엑스’는 같은 제품으로 처리. 세트는 낱개로 풀지 않음.</li>
       <li><b>약국 구분</b>: 폐쇄몰은 월 시트의 약국 목록 탭(약국명·고객명·연락처)으로 약국명 확인, 없으면 입점·회원 리스트와 KD 원장에서 같은 배송 주소(도로명+건물번호)나 전화번호의 약국으로 매칭. 그래도 못 찾은 주문은 ‘미확인(주문자 이름)’으로 표시. KD는 주문원장 약국명에서 아이디를 뺀 이름(이름이 같은 다른 약국은 상권을 붙여 구분).</li>
       <li><b>체인 약국 지점</b>: 레디영·베리뉴약국처럼 한 계정으로 여러 지점에 보내는 주문은 배송지로 지점 구분, ‘레디영약국(명동타운)’처럼 ‘약국명(지점명)’으로 표시(지점명은 공식 매장명 기준). 도레미약국은 본사(주흥길 9) 일괄 주문이라 지점 구분 없이 ‘도레미약국’. 아직 등록되지 않은 새 배송지는 ‘약국명(상권)’으로 임시 표시. 세 채널 동일 규칙.</li>
@@ -519,20 +519,22 @@ dash.calc('line_summary', {
 });
 
 dash.calc('line_trend', {
-  title: '월별 라인 비중',
-  description: '2026년 모든 달의 주문 내역을 라인별로 합산해 그 달 전체 주문 금액에서 차지하는 비율 계산 (기간 버튼과 무관)',
-  inputs: ['order_lines'],
-  fn: (lines) => {
+  title: '라인 비중 추이',
+  description: '선택한 기간의 주문 내역을 라인별로 합산해, 이번 달은 날짜별, 최근 3개월·2026년 전체는 달별로 그 날(달) 전체 주문 금액에서 차지하는 비율을 계산. 최근 3개월·2026년 전체는 기간 합계 기준 평균 비중(key=avg)도 함께 계산',
+  inputs: ['order_lines', 'channel_daily'],
+  fn: (lines, daily) => {
+    const daily_ = (dash.params().period || 'month') === 'month';
     const m = new Map(), tot = new Map();
-    for (const r of lines) {
-      const key = r.month + '|' + (r.line || '기타'), a = +r.amount || 0;
-      m.set(key, (m.get(key) || 0) + a);
-      tot.set(r.month, (tot.get(r.month) || 0) + a);
+    const add = (key, line, a) => { const k = key + '|' + line; m.set(k, (m.get(k) || 0) + a); tot.set(key, (tot.get(key) || 0) + a); };
+    for (const r of inPeriod(lines, daily)) {
+      const a = +r.amount || 0, line = r.line || '기타';
+      add(daily_ ? r.date : r.month, line, a);
+      if (!daily_) add('avg', line, a);
     }
     return [...m.entries()].map(([k, a]) => {
-      const i = k.indexOf('|'), month = k.slice(0, i), line = k.slice(i + 1), t = tot.get(month) || 0;
-      return { month, line, amount: a, share: t ? a / t : 0 };
-    }).sort((a, b) => a.month.localeCompare(b.month) || b.amount - a.amount);
+      const i = k.indexOf('|'), key = k.slice(0, i), line = k.slice(i + 1), t = tot.get(key) || 0;
+      return { key, line, amount: a, share: t ? a / t : 0 };
+    }).sort((a, b) => (a.key === 'avg') - (b.key === 'avg') || a.key.localeCompare(b.key) || b.amount - a.amount);
   },
 });
 
@@ -621,6 +623,11 @@ dash.onData(() => {
   dash.draw('range', info('range'));
   dash.draw('basis', info('basis'));
   for (const t of ['tag-ch', 'tag-pr', 'tag-re', 'tag-ph', 'tag-rg', 'tag-ln']) dash.draw(t, info('tag'));
+  dash.draw('ltrend-unit', (el) => {
+    const d = dash.data('period_info');
+    const p = d.status === 'ok' && d.data && d.data[0] ? d.data[0].period : null;
+    el.textContent = !p ? '—' : p === 'month' ? '(일별, 그날 매출 대비)' : p === '3m' ? '(월별 · 맨 오른쪽 3개월 평균)' : '(월별 · 맨 오른쪽 2026년 평균)';
+  });
   const avg = () => { const d = dash.data('period_info'); return !!(d.status === 'ok' && d.data && d.data[0] && d.data[0].period !== 'month'); };
   dash.draw('lead-pre', (el) => { el.textContent = avg() ? '월평균' : '이 기간'; });
   dash.draw('lead-pre2', (el) => { el.textContent = avg() ? '월평균 주문 약국' : '주문한 약국'; });
@@ -774,42 +781,61 @@ dash.draw('ln-rows', (tb) => {
 
 dash.draw('ltrend-chart', (el) => {
   const d = dash.data('line_trend');
-  if (!PDC.status(el, d) || PDC.empty(el, d.data)) return;
-  const totals = new Map();
-  for (const r of d.data) totals.set(r.line, (totals.get(r.line) || 0) + (+r.amount || 0));
-  const order = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([l]) => l);
-  const top = order.slice(0, 7);
-  const series = order.length > 7 ? [...top, '그 외'] : top;
-  const grp = (l) => (top.includes(l) ? l : '그 외');
-  const months = [...new Set(d.data.map((r) => r.month))].sort();
-  const rows = months.map((mo) => { const o = { key: mo }; series.forEach((s) => { o[s] = 0; }); return o; });
+  const info = dash.data('period_info');
+  if (!PDC.status(el, d) || !PDC.status(el, info) || PDC.empty(el, d.data)) return;
+  const pi = info.data[0] || {};
+  const isDaily = pi.period === 'month';
+  const avgLabel = pi.period === '3m' ? '3개월 평균' : '2026년 평균';
+  // 기간이 바뀌어도 라인 색이 같도록 순서 고정, 나머지 라인은 '그 외'
+  const MAIN = ['팔트', '칼슘', 'TX', '필샷', '칵톡스', '에스징크', '멜라씨이'];
+  const present = new Set(d.data.map((r) => r.line));
+  const grp = (l) => (MAIN.includes(l) ? l : '그 외');
+  const series = [...MAIN, '그 외'].filter((s) => (s === '그 외' ? [...present].some((l) => !MAIN.includes(l)) : present.has(s)));
+  const colorOf = (s) => PD.lcol(s === '그 외' ? 7 : MAIN.indexOf(s));
+  let keys;
+  if (isDaily) {
+    const ms = pi.months ? pi.months.split(',') : [];
+    const [y, mo] = (ms[0] || '2026-01').split('-').map(Number);
+    const n = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    keys = d3.range(1, n + 1).map((k) => `${ms[0]}-${String(k).padStart(2, '0')}`);
+  } else {
+    keys = [...new Set(d.data.map((r) => r.key).filter((k) => k !== 'avg'))].sort();
+    if (keys.length > 1) keys.push('avg');
+  }
+  const lab = (k) => (k === 'avg' ? avgLabel : PDC.keyLabel(k));
+  const rows = keys.map((k) => { const o = { key: k, has: false }; series.forEach((s) => { o[s] = 0; }); return o; });
   const idx = new Map(rows.map((r) => [r.key, r]));
-  for (const r of d.data) idx.get(r.month)[grp(r.line)] += +r.share || 0;
+  for (const r of d.data) { const o = idx.get(r.key); if (!o) continue; o[grp(r.line)] += +r.share || 0; o.has = true; }
   el.replaceChildren();
   const lg = document.createElement('div'); lg.className = 'legend';
-  series.forEach((s, i) => { const sp = document.createElement('span'); const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = PD.lcol(i); sp.append(sw, s); lg.appendChild(sp); });
+  series.forEach((s, i) => { const sp = document.createElement('span'); const sw = document.createElement('i'); sw.className = 'sw'; sw.style.background = colorOf(s); sp.append(sw, s); lg.appendChild(sp); });
   el.appendChild(lg);
   const W = el.clientWidth || 600, H = 260, m = { t: 10, r: 10, b: 24, l: 10 };
-  const svg = d3.select(el).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', '2026년 월별 라인 매출 비중 100% 누적 막대');
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img')
+    .attr('aria-label', isDaily ? '이번 달 일별 라인 매출 비중 100% 누적 막대' : `월별 라인 매출 비중과 ${avgLabel} 100% 누적 막대`);
   const y = d3.scaleLinear().domain([0, 1]).range([H - m.b, m.t]);
   const ya = svg.append('g').call(d3.axisLeft(y).ticks(4).tickFormat(d3.format('.0%')));
   let lw = 0; ya.selectAll('text').each(function () { lw = Math.max(lw, this.getComputedTextLength()); });
   m.l = lw + 12; ya.attr('transform', `translate(${m.l},0)`);
   ya.selectAll('.tick line').attr('x2', W - m.l - m.r); ya.select('.domain').remove();
-  const x = d3.scaleBand().domain(months).range([m.l, W - m.r]).padding(0.2);
-  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickFormat(PDC.keyLabel).tickSize(0)).select('.domain').remove();
+  const x = d3.scaleBand().domain(keys).range([m.l, W - m.r]).padding(0.2);
+  const step = Math.ceil(keys.length / Math.max(1, Math.floor((W - m.l) / 40)));
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`)
+    .call(d3.axisBottom(x).tickValues(keys.filter((k, i) => k === 'avg' || i % step === 0)).tickFormat(lab).tickSize(0)).select('.domain').remove();
   const tip = PDC.tip(el);
   const g = svg.selectAll('g.b').data(rows).join('g').attr('class', 'b');
+  g.filter((r) => r.key === 'avg').append('rect').attr('x', (r) => x(r.key) - 3).attr('width', x.bandwidth() + 6).attr('y', m.t - 3).attr('height', H - m.b - m.t + 3)
+    .style('fill', 'none').style('stroke', 'var(--color-fg-muted)').style('stroke-dasharray', '3 3');
   series.forEach((s, i) => {
     const below = (r) => series.slice(0, i).reduce((a, k) => a + r[k], 0);
     g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', (r) => y(below(r) + r[s]))
-      .attr('height', (r) => Math.max(0, y(below(r)) - y(below(r) + r[s]))).style('fill', PD.lcol(i));
+      .attr('height', (r) => Math.max(0, y(below(r)) - y(below(r) + r[s]))).style('fill', colorOf(s));
     if (x.bandwidth() >= 26) g.filter((r) => y(below(r)) - y(below(r) + r[s]) >= 14).append('text')
       .attr('x', (r) => x(r.key) + x.bandwidth() / 2).attr('y', (r) => y(below(r) + r[s] / 2)).attr('dy', '0.35em').attr('text-anchor', 'middle')
       .style('fill', '#fff').style('font-size', '10px').text((r) => Math.round(r[s] * 100) + '%');
   });
   g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
-    .on('mousemove', (ev, r) => tip.show(ev, [PDC.keyLabel(r.key), ...series.filter((s) => r[s] >= 0.0005).map((s) => `${s} ${PD.pct(r[s])}`)]))
+    .on('mousemove', (ev, r) => tip.show(ev, [lab(r.key), ...(r.has ? series.filter((s) => r[s] >= 0.0005).map((s) => `${s} ${PD.pct(r[s])}`) : ['주문 없음'])]))
     .on('mouseleave', () => tip.hide());
 });
 
